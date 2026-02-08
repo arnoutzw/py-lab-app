@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyLab — Browser Python Notebook</title>
+    <meta name="description" content="A Jupyter-like notebook running Python with NumPy, SciPy, and Matplotlib entirely in the browser.">
+    <meta name="theme-color" content="#09090b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link id="manifest-link" rel="manifest" href="">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CodeMirror 5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/comment/comment.min.js"></script>
+
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                    mono: ['JetBrains Mono', 'monospace']
+                }
+            }
+        }
+    }
+    </script>
+
+    <style>
+        /* ── Scrollbars ── */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #18181b; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* ── CodeMirror Theme ── */
+        .CodeMirror {
+            background: #18181b !important;
+            color: #f4f4f5 !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 14px;
+            line-height: 1.65;
+            height: auto;
+            border: none;
+            padding: 4px 0;
+        }
+        .CodeMirror-gutters {
+            background: #18181b !important;
+            border-right: 1px solid #27272a !important;
+        }
+        .CodeMirror-linenumber {
+            color: #52525b !important;
+            font-size: 12px;
+            padding: 0 8px 0 12px !important;
+        }
+        .CodeMirror-cursor { border-left: 2px solid #f59e0b !important; }
+        .CodeMirror-selected { background: rgba(245,158,11,0.12) !important; }
+        .CodeMirror-focused .CodeMirror-selected { background: rgba(245,158,11,0.18) !important; }
+        .CodeMirror-activeline-background { background: rgba(39,39,42,0.5) !important; }
+        .CodeMirror-matchingbracket { color: #fbbf24 !important; outline: 1px solid #fbbf2460; background: rgba(251,191,36,0.1); }
+
+        /* Syntax tokens */
+        .cm-s-default .cm-keyword { color: #f59e0b !important; font-weight: 500; }
+        .cm-s-default .cm-def { color: #60a5fa !important; }
+        .cm-s-default .cm-variable { color: #f4f4f5 !important; }
+        .cm-s-default .cm-variable-2 { color: #e2e8f0 !important; }
+        .cm-s-default .cm-variable-3 { color: #c084fc !important; }
+        .cm-s-default .cm-property { color: #f4f4f5 !important; }
+        .cm-s-default .cm-operator { color: #fbbf24 !important; }
+        .cm-s-default .cm-number { color: #34d399 !important; }
+        .cm-s-default .cm-string { color: #4ade80 !important; }
+        .cm-s-default .cm-string-2 { color: #86efac !important; }
+        .cm-s-default .cm-comment { color: #71717a !important; font-style: italic; }
+        .cm-s-default .cm-builtin { color: #c084fc !important; }
+        .cm-s-default .cm-meta { color: #a1a1aa !important; }
+        .cm-s-default .cm-atom { color: #f472b6 !important; }
+        .cm-s-default .cm-error { color: #f87171 !important; }
+
+        /* ── Animations ── */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 30px rgba(245,158,11,0.15); }
+            50%      { box-shadow: 0 0 60px rgba(245,158,11,0.35); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .anim-fade-in { animation: fadeInUp 0.3s ease-out both; }
+        .anim-glow    { animation: pulseGlow 2s ease-in-out infinite; }
+        .anim-spin    { animation: spin 1s linear infinite; }
+
+        /* ── Cell Add Buttons ── */
+        .add-row { opacity: 0; transition: opacity 0.2s; height: 28px; }
+        .add-row:hover, .add-row:focus-within { opacity: 1; }
+
+        /* ── Markdown Rendered Prose ── */
+        .md-rendered h1 { font-size: 1.5rem; font-weight: 700; color: #f59e0b; margin: 0.75rem 0 0.5rem; }
+        .md-rendered h2 { font-size: 1.25rem; font-weight: 700; color: #f4f4f5; margin: 0.6rem 0 0.4rem; }
+        .md-rendered h3 { font-size: 1.1rem; font-weight: 600; color: #f4f4f5; margin: 0.5rem 0 0.3rem; }
+        .md-rendered p { color: #d4d4d8; margin: 0.4rem 0; line-height: 1.7; }
+        .md-rendered a { color: #f59e0b; text-decoration: underline; }
+        .md-rendered code { background: #27272a; color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; }
+        .md-rendered pre { background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 12px 16px; overflow-x: auto; margin: 0.5rem 0; }
+        .md-rendered pre code { background: none; padding: 0; }
+        .md-rendered ul, .md-rendered ol { padding-left: 1.5rem; color: #d4d4d8; margin: 0.4rem 0; }
+        .md-rendered li { margin: 0.2rem 0; }
+        .md-rendered blockquote { border-left: 3px solid #f59e0b; padding-left: 1rem; color: #a1a1aa; margin: 0.5rem 0; }
+        .md-rendered hr { border: none; border-top: 1px solid #3f3f46; margin: 1rem 0; }
+        .md-rendered img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; }
+        .md-rendered table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+        .md-rendered th, .md-rendered td { border: 1px solid #3f3f46; padding: 6px 12px; text-align: left; }
+        .md-rendered th { background: #27272a; color: #f4f4f5; font-weight: 600; }
+        .md-rendered td { color: #d4d4d8; }
+
+        /* ── Misc ── */
+        .cell-output-scroll { max-height: 500px; overflow-y: auto; }
+        body { padding-bottom: 44px; }
+    </style>
+</head>
+
+<body class="bg-zinc-950 text-zinc-100 font-sans min-h-screen">
+
+<!-- ══════════════ LOADING SCREEN ══════════════ -->
+<div id="loading-screen" class="fixed inset-0 z-[100] bg-zinc-950 flex items-center justify-center">
+    <div class="text-center">
+        <div class="w-24 h-24 mx-auto mb-6 rounded-2xl bg-zinc-900 border border-zinc-700 flex items-center justify-center anim-glow">
+            <span class="text-amber-500 font-mono font-bold text-5xl select-none">λ</span>
+        </div>
+        <h1 class="font-mono font-bold text-2xl text-amber-500 mb-1">PyLab</h1>
+        <p class="text-zinc-500 text-sm mb-8">Browser-native Python notebook</p>
+        <div class="w-72 h-1.5 bg-zinc-800 rounded-full overflow-hidden mx-auto mb-4">
+            <div id="progress-fill" class="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500" style="width:0%"></div>
+        </div>
+        <p id="loading-status" class="text-xs font-mono text-zinc-500">Initializing&hellip;</p>
+        <p id="loading-error" class="text-xs font-mono text-red-400 mt-3 hidden"></p>
+    </div>
+</div>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="sticky top-0 z-40 bg-zinc-900/80 backdrop-blur-sm border-b border-zinc-800">
+    <div class="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+        <!-- Left: branding -->
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="flex gap-1.5">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
+            <span class="text-amber-500 font-mono font-bold text-lg leading-none select-none">λ</span>
+            <span class="font-mono font-bold text-zinc-100 text-sm hidden sm:inline">PyLab</span>
+            <span class="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded font-mono hidden sm:inline">PWA</span>
+        </div>
+        <!-- Right: toolbar -->
+        <div class="flex items-center gap-1.5 flex-wrap justify-end">
+            <button onclick="runAllCells()" class="bg-amber-500 hover:bg-amber-400 text-zinc-900 font-mono font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5" title="Run All Cells">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Run All
+            </button>
+            <button onclick="restartKernel()" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors" title="Restart Kernel">↺ Restart</button>
+            <button onclick="clearAllOutputs()" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors" title="Clear Outputs">Clear</button>
+            <div class="w-px h-5 bg-zinc-700 mx-1 hidden sm:block"></div>
+            <button onclick="downloadNotebook()" class="text-zinc-400 hover:text-amber-400 hover:bg-zinc-800 px-2 py-1.5 rounded-lg transition-colors" title="Download Notebook">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+            <button onclick="document.getElementById('file-input').click()" class="text-zinc-400 hover:text-amber-400 hover:bg-zinc-800 px-2 py-1.5 rounded-lg transition-colors" title="Load Notebook">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- ══════════════ NOTEBOOK ══════════════ -->
+<main id="notebook" class="max-w-5xl mx-auto px-4 py-6"></main>
+
+<!-- ══════════════ STATUS BAR ══════════════ -->
+<footer class="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 px-4 py-1 z-40">
+    <div class="max-w-6xl mx-auto flex items-center justify-between text-xs font-mono">
+        <div class="flex items-center gap-3">
+            <span id="kernel-status" class="flex items-center gap-1.5">
+                <span id="kernel-dot" class="w-2 h-2 rounded-full bg-zinc-600"></span>
+                <span id="kernel-label" class="text-zinc-500">Loading…</span>
+            </span>
+            <span class="text-zinc-700">│</span>
+            <span id="cell-count" class="text-zinc-500">0 cells</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-zinc-600 hidden sm:inline">Shift+Enter: Run &amp; Advance</span>
+            <span class="text-zinc-700 hidden sm:inline">│</span>
+            <span class="text-zinc-600 hidden sm:inline">Ctrl+Enter: Run</span>
+            <span class="text-zinc-700 hidden md:inline">│</span>
+            <span class="text-zinc-500 hidden md:inline">NumPy · SciPy · Matplotlib</span>
+        </div>
+    </div>
+</footer>
+
+<!-- Hidden file input -->
+<input type="file" id="file-input" accept=".json,.pylab" class="hidden" onchange="handleFileLoad(event)">
+
+<!-- ══════════════ PYODIDE ══════════════ -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let pyodide = null;
+let cells = [];
+let selectedCellId = null;
+let execCount = 0;
+let cellIdSeq = 0;
+let kernelReady = false;
+let kernelBusy = false;
+
+// ═══════════════════════════════════════════
+//  ICONS (inline SVG helpers)
+// ═══════════════════════════════════════════
+function svgIcon(paths, size = 16) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+}
+const ICO = {
+    play:      (s) => svgIcon('<polygon points="5 3 19 12 5 21 5 3"></polygon>', s),
+    plus:      (s) => svgIcon('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>', s),
+    trash:     (s) => svgIcon('<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>', s),
+    chevUp:    (s) => svgIcon('<polyline points="18 15 12 9 6 15"/>', s),
+    chevDown:  (s) => svgIcon('<polyline points="6 9 12 15 18 9"/>', s),
+    x:         (s) => svgIcon('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>', s),
+    code:      (s) => svgIcon('<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>', s),
+    type:      (s) => svgIcon('<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>', s),
+};
+
+// ═══════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════
+function genId() { return `cell-${++cellIdSeq}`; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function idx(id) { return cells.findIndex(c => c.id === id); }
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-4 py-2 rounded-lg shadow-lg anim-fade-in';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(() => t.remove(), 400); }, 2200);
+}
+
+// ═══════════════════════════════════════════
+//  CELL MANAGEMENT
+// ═══════════════════════════════════════════
+function createCell(type = 'code', content = '', afterIdx = cells.length - 1) {
+    const cell = { id: genId(), type, content, executionCount: null, output: null, editor: null, isRunning: false, rendered: false };
+    if (afterIdx < 0 && cells.length === 0) { cells.push(cell); }
+    else { cells.splice(afterIdx + 1, 0, cell); }
+    renderNotebook();
+    selectCell(cell.id);
+    return cell;
+}
+
+function deleteCell(id) {
+    const i = idx(id);
+    if (i === -1) return;
+    cells.splice(i, 1);
+    if (cells.length === 0) createCell('code', '', -1);
+    else if (selectedCellId === id) selectCell(cells[Math.min(i, cells.length - 1)].id);
+    else renderNotebook();
+}
+
+function moveCellDir(id, dir) {
+    const i = idx(id);
+    const ni = i + dir;
+    if (ni < 0 || ni >= cells.length) return;
+    [cells[i], cells[ni]] = [cells[ni], cells[i]];
+    renderNotebook();
+    selectCell(id);
+}
+
+function toggleCellType(id) {
+    const cell = cells.find(c => c.id === id);
+    if (!cell) return;
+    if (cell.editor) { cell.content = cell.editor.getValue(); cell.editor = null; }
+    cell.type = cell.type === 'code' ? 'markdown' : 'code';
+    cell.rendered = false;
+    cell.output = null;
+    cell.executionCount = null;
+    renderNotebook();
+    selectCell(id);
+}
+
+function selectCell(id) {
+    selectedCellId = id;
+    document.querySelectorAll('.cell-wrap').forEach(el => {
+        el.classList.toggle('border-l-amber-500', el.dataset.cellId === id);
+        el.classList.toggle('border-l-zinc-800', el.dataset.cellId !== id);
+    });
+    const cell = cells.find(c => c.id === id);
+    if (cell && cell.editor) setTimeout(() => cell.editor.focus(), 10);
+}
+
+function addCellAfter(afterIdx, type) { createCell(type, '', afterIdx); }
+
+// ═══════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════
+function renderNotebook() {
+    // Persist editor contents before teardown
+    cells.forEach(c => { if (c.editor) { c.content = c.editor.getValue(); c.editor = null; } });
+
+    const nb = document.getElementById('notebook');
+    nb.innerHTML = '';
+
+    nb.appendChild(makeAddRow(-1));
+    cells.forEach((cell, i) => {
+        nb.appendChild(makeCellDOM(cell, i));
+        nb.appendChild(makeAddRow(i));
+    });
+
+    // Init editors
+    cells.forEach(c => initEditor(c));
+    updateStatusBar();
+}
+
+function makeAddRow(afterIdx) {
+    const row = document.createElement('div');
+    row.className = 'add-row flex items-center justify-center gap-2';
+    row.innerHTML = `
+        <button onclick="addCellAfter(${afterIdx},'code')" class="text-zinc-600 hover:text-amber-400 hover:bg-zinc-800/60 px-2.5 py-0.5 rounded text-xs font-mono flex items-center gap-1 transition-colors">${ICO.plus(10)} Code</button>
+        <button onclick="addCellAfter(${afterIdx},'markdown')" class="text-zinc-600 hover:text-amber-400 hover:bg-zinc-800/60 px-2.5 py-0.5 rounded text-xs font-mono flex items-center gap-1 transition-colors">${ICO.type(10)} Markdown</button>`;
+    return row;
+}
+
+function makeCellDOM(cell) {
+    const isSelected = cell.id === selectedCellId;
+    const wrap = document.createElement('div');
+    wrap.className = `cell-wrap anim-fade-in border-l-2 ${isSelected ? 'border-l-amber-500' : 'border-l-zinc-800'} bg-zinc-900 rounded-lg overflow-hidden group transition-all duration-200`;
+    wrap.dataset.cellId = cell.id;
+
+    const execLabel = cell.type === 'code'
+        ? `In [${cell.executionCount ?? ' '}]:`
+        : 'Md';
+
+    const runBtnClass = cell.isRunning
+        ? 'text-blue-400'
+        : 'text-zinc-500 hover:text-amber-400 hover:bg-zinc-800';
+
+    // ── Toolbar
+    let toolbar = `
+    <div class="flex items-center justify-between px-3 py-1.5 border-b border-zinc-800/60">
+        <div class="flex items-center gap-2">
+            <span class="font-mono text-xs ${cell.isRunning ? 'text-blue-400' : 'text-zinc-600'}">${esc(execLabel)}</span>
+            ${cell.isRunning ? '<span class="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full anim-spin"></span>' : ''}
+        </div>
+        <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+            <button onclick="runCell('${cell.id}')" class="${runBtnClass} px-2 py-1 rounded text-xs font-mono flex items-center gap-1 transition-colors" title="Run (Shift+Enter)">${ICO.play(12)} Run</button>
+            <button onclick="moveCellDir('${cell.id}',-1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Up">${ICO.chevUp(14)}</button>
+            <button onclick="moveCellDir('${cell.id}',1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Down">${ICO.chevDown(14)}</button>
+            <button onclick="toggleCellType('${cell.id}')" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded text-xs font-mono transition-colors" title="Toggle Code/Markdown">${cell.type === 'code' ? ICO.code(14) : ICO.type(14)}</button>
+            <button onclick="deleteCell('${cell.id}')" class="text-zinc-500 hover:text-red-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Delete Cell">${ICO.x(14)}</button>
+        </div>
+    </div>`;
+
+    // ── Editor / rendered markdown
+    let editorArea;
+    if (cell.type === 'markdown' && cell.rendered) {
+        editorArea = `<div class="md-rendered px-4 py-3 cursor-pointer min-h-[2.5rem]" ondblclick="unrenderMarkdown('${cell.id}')">${marked.parse(cell.content || '*empty*')}</div>`;
+    } else {
+        editorArea = `<div class="cell-editor-area"><textarea id="editor-${cell.id}">${esc(cell.content)}</textarea></div>`;
+    }
+
+    // ── Output
+    let outputArea = '';
+    if (cell.output) {
+        const o = cell.output;
+        let parts = [];
+
+        if (o.stdout) parts.push(`<pre class="font-mono text-sm text-zinc-300 whitespace-pre-wrap">${esc(o.stdout)}</pre>`);
+        if (o.result) parts.push(`<pre class="font-mono text-sm text-zinc-100 whitespace-pre-wrap">${esc(o.result)}</pre>`);
+        if (o.figures && o.figures.length) {
+            o.figures.forEach(f => parts.push(`<img src="data:image/png;base64,${f}" class="max-w-full rounded-lg my-1">`));
+        }
+        if (o.stderr) parts.push(`<pre class="font-mono text-xs text-yellow-400/80 whitespace-pre-wrap">${esc(o.stderr)}</pre>`);
+        if (o.error) parts.push(`<pre class="font-mono text-sm text-red-400 whitespace-pre-wrap bg-red-500/10 rounded-lg p-3">${esc(o.error)}</pre>`);
+
+        if (parts.length) {
+            outputArea = `
+            <div class="border-t border-zinc-800/60 px-4 py-3 cell-output-scroll">
+                ${cell.type === 'code' && cell.executionCount ? `<span class="font-mono text-xs text-zinc-600 block mb-1.5">Out [${cell.executionCount}]:</span>` : ''}
+                <div class="flex flex-col gap-2">${parts.join('')}</div>
+            </div>`;
+        }
+    }
+
+    wrap.innerHTML = toolbar + editorArea + outputArea;
+
+    // Click to select
+    wrap.addEventListener('mousedown', (e) => {
+        if (!e.target.closest('button')) selectCell(cell.id);
+    });
+
+    return wrap;
+}
+
+function initEditor(cell) {
+    if (cell.type === 'markdown' && cell.rendered) return;
+    const ta = document.getElementById(`editor-${cell.id}`);
+    if (!ta) return;
+
+    const mode = cell.type === 'code' ? 'python' : 'markdown';
+    cell.editor = CodeMirror.fromTextArea(ta, {
+        mode,
+        lineNumbers: cell.type === 'code',
+        matchBrackets: cell.type === 'code',
+        autoCloseBrackets: cell.type === 'code',
+        styleActiveLine: true,
+        indentUnit: 4,
+        tabSize: 4,
+        indentWithTabs: false,
+        lineWrapping: cell.type === 'markdown',
+        viewportMargin: Infinity,
+        extraKeys: {
+            'Shift-Enter': () => runCellAndAdvance(cell.id),
+            'Ctrl-Enter': () => runCell(cell.id),
+            'Cmd-Enter': () => runCell(cell.id),
+            'Ctrl-/': 'toggleComment',
+            'Cmd-/': 'toggleComment',
+            'Tab': (cm) => {
+                if (cm.somethingSelected()) cm.indentSelection('add');
+                else cm.replaceSelection('    ', 'end');
+            }
+        }
+    });
+    cell.editor.on('focus', () => selectCell(cell.id));
+}
+
+function unrenderMarkdown(id) {
+    const cell = cells.find(c => c.id === id);
+    if (!cell) return;
+    cell.rendered = false;
+    renderNotebook();
+    selectCell(id);
+}
+
+function updateStatusBar() {
+    const dot = document.getElementById('kernel-dot');
+    const label = document.getElementById('kernel-label');
+    const count = document.getElementById('cell-count');
+
+    if (!kernelReady) {
+        dot.className = 'w-2 h-2 rounded-full bg-zinc-600';
+        label.textContent = 'Loading…';
+        label.className = 'text-zinc-500';
+    } else if (kernelBusy) {
+        dot.className = 'w-2 h-2 rounded-full bg-blue-400 anim-spin';
+        label.textContent = 'Busy';
+        label.className = 'text-blue-400';
+    } else {
+        dot.className = 'w-2 h-2 rounded-full bg-green-400';
+        label.textContent = 'Ready';
+        label.className = 'text-green-400';
+    }
+    count.textContent = `${cells.length} cell${cells.length !== 1 ? 's' : ''}`;
+}
+
+// ═══════════════════════════════════════════
+//  EXECUTION
+// ═══════════════════════════════════════════
+async function initPyodide() {
+    try {
+        updateLoading(5, 'Loading Pyodide runtime…');
+        pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/' });
+
+        updateLoading(20, 'Loading NumPy…');
+        await pyodide.loadPackage('numpy');
+
+        updateLoading(40, 'Loading Matplotlib…');
+        await pyodide.loadPackage('matplotlib');
+
+        updateLoading(60, 'Loading SciPy…');
+        await pyodide.loadPackage('scipy');
+
+        updateLoading(85, 'Configuring environment…');
+        await pyodide.runPythonAsync(`
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+plt.style.use('dark_background')
+plt.rcParams.update({
+    'figure.facecolor': '#18181b',
+    'axes.facecolor': '#27272a',
+    'axes.edgecolor': '#3f3f46',
+    'axes.labelcolor': '#a1a1aa',
+    'text.color': '#f4f4f5',
+    'xtick.color': '#71717a',
+    'ytick.color': '#71717a',
+    'grid.color': '#3f3f46',
+    'grid.alpha': 0.3,
+    'figure.figsize': [10, 5],
+    'savefig.facecolor': '#18181b',
+    'savefig.edgecolor': 'none',
+    'font.size': 12,
+})
+import numpy as np
+import scipy
+`);
+
+        kernelReady = true;
+        updateLoading(100, 'Ready!');
+        setTimeout(() => {
+            document.getElementById('loading-screen').style.opacity = '0';
+            document.getElementById('loading-screen').style.transition = 'opacity 0.5s';
+            setTimeout(() => document.getElementById('loading-screen').classList.add('hidden'), 500);
+        }, 400);
+        updateStatusBar();
+    } catch (err) {
+        document.getElementById('loading-error').textContent = `Error: ${err.message}. Check your connection and refresh.`;
+        document.getElementById('loading-error').classList.remove('hidden');
+    }
+}
+
+function updateLoading(pct, msg) {
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('loading-status').textContent = msg;
+}
+
+async function runCell(cellId) {
+    const cell = cells.find(c => c.id === cellId);
+    if (!cell) return;
+
+    // Markdown cells: render and return
+    if (cell.type === 'markdown') {
+        if (cell.editor) { cell.content = cell.editor.getValue(); cell.editor = null; }
+        cell.rendered = true;
+        renderNotebook();
+        return;
+    }
+
+    if (!kernelReady || kernelBusy) {
+        showToast(kernelBusy ? 'Kernel is busy — wait for current cell to finish.' : 'Kernel is still loading…');
+        return;
+    }
+
+    const code = cell.editor ? cell.editor.getValue() : cell.content;
+    if (!code.trim()) return;
+
+    // Save content
+    if (cell.editor) cell.content = cell.editor.getValue();
+
+    cell.isRunning = true;
+    kernelBusy = true;
+    execCount++;
+    cell.executionCount = execCount;
+    cell.output = null;
+    refreshCellUI(cell);
+    updateStatusBar();
+
+    try {
+        pyodide.globals.set('__user_code__', code);
+
+        const raw = await pyodide.runPythonAsync(`
+import sys as __sys, io as __io, json as __json, base64 as __b64, ast as __ast, traceback as __tb
+
+__out = __io.StringIO()
+__err = __io.StringIO()
+__o_stdout = __sys.stdout
+__o_stderr = __sys.stderr
+__sys.stdout = __out
+__sys.stderr = __err
+
+__xerr = None
+__xres = None
+
+try:
+    __tree = __ast.parse(__user_code__)
+    if __tree.body and isinstance(__tree.body[-1], __ast.Expr):
+        __last = __ast.Expression(__tree.body[-1].value)
+        __ast.copy_location(__last, __tree.body[-1])
+        __mod = __ast.Module(body=__tree.body[:-1], type_ignores=[])
+        exec(compile(__mod, '<cell>', 'exec'), globals())
+        __xval = eval(compile(__last, '<cell>', 'eval'), globals())
+        if __xval is not None:
+            __xres = repr(__xval)
+    else:
+        exec(compile(__tree, '<cell>', 'exec'), globals())
+except:
+    __xerr = __tb.format_exc()
+finally:
+    __sys.stdout = __o_stdout
+    __sys.stderr = __o_stderr
+
+__figs = []
+try:
+    import matplotlib.pyplot as __plt
+    for __fn in __plt.get_fignums():
+        __fig = __plt.figure(__fn)
+        __buf = __io.BytesIO()
+        __fig.savefig(__buf, format='png', dpi=150, bbox_inches='tight',
+                      facecolor='#18181b', edgecolor='none')
+        __buf.seek(0)
+        __figs.append(__b64.b64encode(__buf.read()).decode())
+    __plt.close('all')
+except:
+    pass
+
+__json.dumps({'stdout': __out.getvalue(), 'stderr': __err.getvalue(), 'error': __xerr, 'result': __xres, 'figures': __figs})
+`);
+        cell.output = JSON.parse(raw);
+    } catch (err) {
+        cell.output = { stdout: '', stderr: '', error: err.message, result: null, figures: [] };
+    }
+
+    cell.isRunning = false;
+    kernelBusy = false;
+    refreshCellUI(cell);
+    updateStatusBar();
+}
+
+function refreshCellUI(cell) {
+    // Re-render just this cell (lightweight)
+    const wrap = document.querySelector(`.cell-wrap[data-cell-id="${cell.id}"]`);
+    if (!wrap) return;
+
+    // Save cursor position
+    let cursorPos = null;
+    if (cell.editor) {
+        cursorPos = cell.editor.getCursor();
+        cell.content = cell.editor.getValue();
+        cell.editor = null;
+    }
+
+    const newWrap = makeCellDOM(cell);
+    wrap.replaceWith(newWrap);
+    initEditor(cell);
+
+    if (cursorPos && cell.editor) {
+        cell.editor.setCursor(cursorPos);
+        cell.editor.focus();
+    }
+    updateStatusBar();
+}
+
+async function runCellAndAdvance(cellId) {
+    await runCell(cellId);
+    const i = idx(cellId);
+    if (i < cells.length - 1) {
+        selectCell(cells[i + 1].id);
+    } else {
+        createCell('code', '', i);
+    }
+}
+
+async function runAllCells() {
+    for (const cell of cells) {
+        if (cell.type === 'code' || cell.type === 'markdown') {
+            await runCell(cell.id);
+        }
+    }
+    showToast('All cells executed');
+}
+
+async function restartKernel() {
+    if (!kernelReady) return;
+    kernelReady = false;
+    kernelBusy = false;
+    execCount = 0;
+    updateStatusBar();
+
+    // Reset all execution counts and outputs
+    cells.forEach(c => { c.executionCount = null; c.output = null; c.isRunning = false; });
+    renderNotebook();
+
+    try {
+        // Re-initialize Python environment
+        await pyodide.runPythonAsync(`
+import importlib, sys
+# Clear user-defined modules from sys.modules is tricky; we just reset the namespace
+for _k in list(globals().keys()):
+    if not _k.startswith('__'):
+        try:
+            del globals()[_k]
+        except:
+            pass
+
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+plt.style.use('dark_background')
+plt.rcParams.update({
+    'figure.facecolor': '#18181b',
+    'axes.facecolor': '#27272a',
+    'axes.edgecolor': '#3f3f46',
+    'axes.labelcolor': '#a1a1aa',
+    'text.color': '#f4f4f5',
+    'xtick.color': '#71717a',
+    'ytick.color': '#71717a',
+    'grid.color': '#3f3f46',
+    'grid.alpha': 0.3,
+    'figure.figsize': [10, 5],
+    'savefig.facecolor': '#18181b',
+    'savefig.edgecolor': 'none',
+    'font.size': 12,
+})
+import numpy as np
+import scipy
+`);
+        kernelReady = true;
+        updateStatusBar();
+        showToast('Kernel restarted');
+    } catch (err) {
+        showToast('Restart failed: ' + err.message);
+    }
+}
+
+function clearAllOutputs() {
+    cells.forEach(c => { c.output = null; c.executionCount = null; });
+    execCount = 0;
+    renderNotebook();
+    showToast('Outputs cleared');
+}
+
+// ═══════════════════════════════════════════
+//  NOTEBOOK SERIALIZATION
+// ═══════════════════════════════════════════
+function downloadNotebook() {
+    cells.forEach(c => { if (c.editor) c.content = c.editor.getValue(); });
+    const data = {
+        version: 1,
+        app: 'PyLab',
+        cells: cells.map(c => ({
+            type: c.type,
+            content: c.content,
+            executionCount: c.executionCount,
+            output: c.output,
+        }))
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `notebook-${new Date().toISOString().slice(0,10)}.pylab`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('Notebook downloaded');
+}
+
+function handleFileLoad(evt) {
+    const file = evt.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.cells && Array.isArray(data.cells)) {
+                cells = data.cells.map(c => ({
+                    id: genId(),
+                    type: c.type || 'code',
+                    content: c.content || '',
+                    executionCount: c.executionCount || null,
+                    output: c.output || null,
+                    editor: null,
+                    isRunning: false,
+                    rendered: c.type === 'markdown' && c.output !== null,
+                }));
+                selectedCellId = cells.length ? cells[0].id : null;
+                renderNotebook();
+                showToast('Notebook loaded');
+            }
+        } catch (err) {
+            showToast('Failed to load notebook');
+        }
+    };
+    reader.readAsText(file);
+    evt.target.value = '';
+}
+
+// ═══════════════════════════════════════════
+//  PWA MANIFEST
+// ═══════════════════════════════════════════
+(function setupManifest() {
+    const icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#09090b"/><rect x="16" y="16" width="480" height="480" rx="80" fill="#18181b" stroke="#3f3f46" stroke-width="2"/><text x="256" y="340" font-family="monospace" font-size="280" font-weight="bold" fill="#f59e0b" text-anchor="middle">λ</text></svg>`;
+    const manifest = {
+        name: 'PyLab — Browser Python Notebook',
+        short_name: 'PyLab',
+        description: 'Jupyter-like notebook with NumPy, SciPy & Matplotlib in the browser',
+        start_url: '.',
+        display: 'standalone',
+        background_color: '#09090b',
+        theme_color: '#09090b',
+        icons: [{ src: `data:image/svg+xml,${encodeURIComponent(icon)}`, sizes: 'any', type: 'image/svg+xml' }]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    document.getElementById('manifest-link').href = URL.createObjectURL(blob);
+})();
+
+// ═══════════════════════════════════════════
+//  DEFAULT CONTENT
+// ═══════════════════════════════════════════
+const WELCOME_MD = `# Welcome to PyLab
+
+A **browser-native** Python notebook powered by [Pyodide](https://pyodide.org). NumPy, SciPy, and Matplotlib are pre-loaded and ready to use.
+
+**Shortcuts:** \`Shift+Enter\` to run & advance · \`Ctrl+Enter\` to run in place · Double-click rendered Markdown to edit`;
+
+const DEMO_CODE = `import numpy as np
+import matplotlib.pyplot as plt
+from scipy import signal
+
+# Generate a composite signal
+t = np.linspace(0, 1, 500, endpoint=False)
+x = np.sin(2 * np.pi * 5 * t) + 0.5 * np.sin(2 * np.pi * 12 * t)
+
+# Low-pass Butterworth filter
+b, a = signal.butter(4, 8, fs=500)
+filtered = signal.filtfilt(b, a, x)
+
+# Plot
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.plot(t, x, alpha=0.5, label='Original', color='#f59e0b')
+ax.plot(t, filtered, label='Filtered (8 Hz cutoff)', color='#4ade80', linewidth=2)
+ax.fill_between(t, x, filtered, alpha=0.08, color='#f59e0b')
+ax.set_xlabel('Time (s)')
+ax.set_ylabel('Amplitude')
+ax.set_title('Signal Filtering with SciPy', fontsize=14, fontweight='bold')
+ax.legend(framealpha=0.3)
+ax.grid(True, alpha=0.2)
+plt.tight_layout()
+plt.show()`;
+
+const DEMO_CODE_2 = `# Quick NumPy demo
+A = np.random.randn(3, 3)
+eigenvalues, eigenvectors = np.linalg.eig(A)
+
+print("Random matrix A:")
+print(np.round(A, 3))
+print("\\nEigenvalues:", np.round(eigenvalues, 3))
+print("\\nDeterminant:", round(np.linalg.det(A), 4))`;
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+(async function main() {
+    // Populate default cells
+    createCell('markdown', WELCOME_MD, -1);
+    cells[0].rendered = true;  // render the welcome markdown
+    createCell('code', DEMO_CODE, 0);
+    createCell('code', DEMO_CODE_2, 1);
+    selectedCellId = cells[1].id;
+    renderNotebook();
+
+    // Boot Pyodide
+    await initPyodide();
+})();
+</script>
+</body>
+</html>
