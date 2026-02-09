@@ -1018,8 +1018,14 @@ async function runCell(cellId) {
     // Markdown cells: render and return
     if (cell.type === 'markdown') {
         if (cell.editor) { cell.content = cell.editor.getValue(); cell.editor = null; }
+        if (cell.rendered) return; // Already rendered, nothing to do
         cell.rendered = true;
-        refreshCellUI(cell);
+        // Full replacement needed: editor -> rendered markdown
+        const wrap = document.querySelector(`.cell-wrap[data-cell-id="${cell.id}"]`);
+        if (wrap) {
+            const newWrap = makeCellDOM(cell);
+            wrap.replaceWith(newWrap);
+        }
         return;
     }
 
@@ -1107,47 +1113,32 @@ function refreshCellUI(cell) {
     const wrap = document.querySelector(`.cell-wrap[data-cell-id="${cell.id}"]`);
     if (!wrap) return;
 
-    // ── If the cell has no live editor, fall back to a full DOM replacement.
-    //    This covers: markdown cells switching to rendered, or cells without editors.
-    if (!cell.editor) {
-        const newWrap = makeCellDOM(cell);
-        wrap.replaceWith(newWrap);
-        initEditor(cell);
-        updateStatusBar();
-        return;
+    // ── Update toolbar text & spinner in-place (no DOM replacement) ──
+    const toolbar = wrap.querySelector(':scope > div:first-child');
+    if (toolbar) {
+        // Update execution label
+        const labelSpan = toolbar.querySelector('.font-mono.text-xs');
+        if (labelSpan) {
+            const execLabel = cell.type === 'code'
+                ? `In [${cell.executionCount ?? ' '}]:`
+                : 'Md';
+            labelSpan.textContent = execLabel;
+            labelSpan.className = `font-mono text-xs ${cell.isRunning ? 'text-blue-400' : 'text-zinc-600'}`;
+        }
+
+        // Toggle spinner
+        const leftGroup = toolbar.querySelector(':scope > div:first-child');
+        const existingSpinner = leftGroup?.querySelector('.anim-spin');
+        if (cell.isRunning && !existingSpinner) {
+            const spinner = document.createElement('span');
+            spinner.className = 'inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full anim-spin';
+            leftGroup.appendChild(spinner);
+        } else if (!cell.isRunning && existingSpinner) {
+            existingSpinner.remove();
+        }
     }
 
-    // ── Surgical update: toolbar + output only, leave editor untouched ──
-
-    // 1. Update toolbar
-    const execLabel = cell.type === 'code'
-        ? `In [${cell.executionCount ?? ' '}]:`
-        : 'Md';
-    const runBtnClass = cell.isRunning
-        ? 'text-blue-400'
-        : 'text-zinc-500 hover:text-amber-400 hover:bg-zinc-800';
-
-    const oldToolbar = wrap.querySelector(':scope > div:first-child');
-    if (oldToolbar) {
-        const newToolbar = document.createElement('div');
-        newToolbar.className = 'flex items-center justify-between px-3 py-1.5 border-b border-zinc-800/60';
-        newToolbar.innerHTML = `
-            <div class="flex items-center gap-2">
-                <span class="font-mono text-xs ${cell.isRunning ? 'text-blue-400' : 'text-zinc-600'}">${esc(execLabel)}</span>
-                ${cell.isRunning ? '<span class="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full anim-spin"></span>' : ''}
-            </div>
-            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                <button onclick="runCell('${cell.id}')" class="${runBtnClass} px-2 py-1 rounded text-xs font-mono flex items-center gap-1 transition-colors" title="Run (Shift+Enter)">${ICO.play(12)} Run</button>
-                <button onclick="moveCellDir('${cell.id}',-1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Up">${ICO.chevUp(14)}</button>
-                <button onclick="moveCellDir('${cell.id}',1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Down">${ICO.chevDown(14)}</button>
-                <button onclick="askAiAboutCell('${cell.id}')" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 px-1.5 py-1 rounded text-xs font-mono transition-colors flex items-center gap-0.5" title="Ask AI about this cell">${svgIcon('<path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>', 12)} AI</button>
-                <button onclick="toggleCellType('${cell.id}')" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded text-xs font-mono transition-colors" title="Toggle Code/Markdown">${cell.type === 'code' ? ICO.code(14) : ICO.type(14)}</button>
-                <button onclick="deleteCell('${cell.id}')" class="text-zinc-500 hover:text-red-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Delete Cell">${ICO.x(14)}</button>
-            </div>`;
-        oldToolbar.replaceWith(newToolbar);
-    }
-
-    // 2. Update output area (remove old, append new if needed)
+    // ── Update output area ──
     const oldOutput = wrap.querySelector('.cell-output-scroll');
     if (oldOutput) oldOutput.remove();
 
