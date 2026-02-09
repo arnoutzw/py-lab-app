@@ -607,7 +607,7 @@
         <div id="ai-key-claude">
             <label class="text-xs font-mono text-zinc-500 block mb-1.5">Anthropic API Key <span class="text-amber-500/60">(Claude)</span></label>
             <div class="flex gap-2">
-                <input id="ai-api-key-claude" type="password" placeholder="sk-ant-..." oninput="saveProviderKey('claude', this.value)"
+                <input id="ai-api-key-claude" type="password" placeholder="sk-ant-..." oninput="saveProviderKey('claude', this.value)" onpaste="setTimeout(()=>saveProviderKey('claude', this.value),0)" onchange="saveProviderKey('claude', this.value)" autocomplete="off"
                     class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors">
                 <button onclick="toggleKeyVisibility('ai-api-key-claude')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -618,7 +618,7 @@
         <div id="ai-key-gemini">
             <label class="text-xs font-mono text-zinc-500 block mb-1.5">Google API Key <span class="text-blue-400/60">(Gemini)</span></label>
             <div class="flex gap-2">
-                <input id="ai-api-key-gemini" type="password" placeholder="AIza..." oninput="saveProviderKey('gemini', this.value)"
+                <input id="ai-api-key-gemini" type="password" placeholder="AIza..." oninput="saveProviderKey('gemini', this.value)" onpaste="setTimeout(()=>saveProviderKey('gemini', this.value),0)" onchange="saveProviderKey('gemini', this.value)" autocomplete="off"
                     class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-blue-500/50 placeholder-zinc-600 transition-colors">
                 <button onclick="toggleKeyVisibility('ai-api-key-gemini')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
