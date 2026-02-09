@@ -130,6 +130,59 @@
         .md-rendered th { background: #27272a; color: #f4f4f5; font-weight: 600; }
         .md-rendered td { color: #d4d4d8; }
 
+        /* ── Cheat Sheet Panel ── */
+        #cheatsheet-panel.open { transform: translateX(0); }
+        .cs-heading {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #f59e0b;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #27272a;
+            margin-bottom: 0.5rem;
+        }
+        .cs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .cs-table thead th {
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #71717a;
+            padding: 0.3rem 0.5rem;
+            border-bottom: 1px solid #27272a;
+        }
+        .cs-table tbody td {
+            padding: 0.35rem 0.5rem;
+            border-bottom: 1px solid #1e1e22;
+            vertical-align: top;
+            color: #d4d4d8;
+        }
+        .cs-table tbody tr:hover td { background: rgba(245, 158, 11, 0.04); }
+        .cs-table code {
+            background: #27272a;
+            color: #fbbf24;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.72rem;
+            white-space: nowrap;
+        }
+        .cs-table thead th:first-child,
+        .cs-table tbody td:first-child { width: 45%; }
+        .cs-note {
+            color: #71717a;
+            font-size: 0.6rem;
+            font-style: italic;
+        }
+        .cs-section.hidden { display: none; }
+
         /* ── Misc ── */
         .cell-output-scroll { max-height: 500px; overflow-y: auto; }
         body { padding-bottom: 44px; }
@@ -183,12 +236,262 @@
             <button onclick="document.getElementById('file-input').click()" class="text-zinc-400 hover:text-amber-400 hover:bg-zinc-800 px-2 py-1.5 rounded-lg transition-colors" title="Load Notebook">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </button>
+            <div class="w-px h-5 bg-zinc-700 mx-1 hidden sm:block"></div>
+            <button onclick="toggleCheatSheet()" id="cheatsheet-btn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5" title="MATLAB → Python Cheat Sheet">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                <span class="hidden sm:inline">Cheat Sheet</span>
+            </button>
         </div>
     </div>
 </header>
 
 <!-- ══════════════ NOTEBOOK ══════════════ -->
 <main id="notebook" class="max-w-5xl mx-auto px-4 py-6"></main>
+
+<!-- ══════════════ CHEAT SHEET PANEL ══════════════ -->
+<div id="cheatsheet-overlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="toggleCheatSheet()"></div>
+<aside id="cheatsheet-panel" class="fixed top-0 right-0 h-full w-[420px] max-w-[90vw] bg-zinc-900 border-l border-zinc-800 z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <!-- Panel Header -->
+    <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
+        <div class="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+            <h2 class="font-mono font-bold text-sm text-zinc-100">MATLAB → Python</h2>
+            <span class="text-xs px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded font-mono">NumPy / SciPy</span>
+        </div>
+        <button onclick="toggleCheatSheet()" class="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
+    <!-- Search -->
+    <div class="px-5 py-3 border-b border-zinc-800 shrink-0">
+        <input id="cheatsheet-search" type="text" placeholder="Search commands..." oninput="filterCheatSheet(this.value)"
+            class="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors">
+    </div>
+
+    <!-- Cheat Sheet Content -->
+    <div id="cheatsheet-content" class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+        <!-- Basic Operations -->
+        <div class="cs-section" data-section="basic">
+            <h3 class="cs-heading">Basic Operations</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (NumPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>a = [1 2 3]</code></td><td><code>a = np.array([1, 2, 3])</code></td></tr>
+                    <tr><td><code>a(1)</code></td><td><code>a[0]</code> <span class="cs-note">0-indexed</span></td></tr>
+                    <tr><td><code>a(end)</code></td><td><code>a[-1]</code></td></tr>
+                    <tr><td><code>a(2:4)</code></td><td><code>a[1:4]</code></td></tr>
+                    <tr><td><code>a'</code></td><td><code>a.T</code></td></tr>
+                    <tr><td><code>length(a)</code></td><td><code>len(a)</code> or <code>a.size</code></td></tr>
+                    <tr><td><code>size(a)</code></td><td><code>a.shape</code></td></tr>
+                    <tr><td><code>numel(a)</code></td><td><code>a.size</code></td></tr>
+                    <tr><td><code>ndims(a)</code></td><td><code>a.ndim</code></td></tr>
+                    <tr><td><code>class(a)</code></td><td><code>a.dtype</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Matrix Creation -->
+        <div class="cs-section" data-section="creation">
+            <h3 class="cs-heading">Matrix / Array Creation</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (NumPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>zeros(3,4)</code></td><td><code>np.zeros((3, 4))</code></td></tr>
+                    <tr><td><code>ones(3,4)</code></td><td><code>np.ones((3, 4))</code></td></tr>
+                    <tr><td><code>eye(3)</code></td><td><code>np.eye(3)</code></td></tr>
+                    <tr><td><code>rand(3,4)</code></td><td><code>np.random.rand(3, 4)</code></td></tr>
+                    <tr><td><code>randn(3,4)</code></td><td><code>np.random.randn(3, 4)</code></td></tr>
+                    <tr><td><code>linspace(0,1,100)</code></td><td><code>np.linspace(0, 1, 100)</code></td></tr>
+                    <tr><td><code>0:0.1:1</code></td><td><code>np.arange(0, 1.1, 0.1)</code></td></tr>
+                    <tr><td><code>diag([1 2 3])</code></td><td><code>np.diag([1, 2, 3])</code></td></tr>
+                    <tr><td><code>[a; b]</code></td><td><code>np.vstack([a, b])</code></td></tr>
+                    <tr><td><code>[a, b]</code></td><td><code>np.hstack([a, b])</code></td></tr>
+                    <tr><td><code>repmat(a,2,3)</code></td><td><code>np.tile(a, (2, 3))</code></td></tr>
+                    <tr><td><code>meshgrid(x,y)</code></td><td><code>np.meshgrid(x, y)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Arithmetic & Element-wise -->
+        <div class="cs-section" data-section="arithmetic">
+            <h3 class="cs-heading">Arithmetic & Element-wise Ops</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (NumPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>a * b</code> <span class="cs-note">matrix</span></td><td><code>a @ b</code> or <code>np.dot(a, b)</code></td></tr>
+                    <tr><td><code>a .* b</code></td><td><code>a * b</code></td></tr>
+                    <tr><td><code>a ./ b</code></td><td><code>a / b</code></td></tr>
+                    <tr><td><code>a .^ 2</code></td><td><code>a ** 2</code></td></tr>
+                    <tr><td><code>a \ b</code></td><td><code>np.linalg.solve(a, b)</code></td></tr>
+                    <tr><td><code>a / b</code> <span class="cs-note">mrdivide</span></td><td><code>a @ np.linalg.inv(b)</code></td></tr>
+                    <tr><td><code>sqrt(a)</code></td><td><code>np.sqrt(a)</code></td></tr>
+                    <tr><td><code>abs(a)</code></td><td><code>np.abs(a)</code></td></tr>
+                    <tr><td><code>exp(a)</code></td><td><code>np.exp(a)</code></td></tr>
+                    <tr><td><code>log(a)</code></td><td><code>np.log(a)</code></td></tr>
+                    <tr><td><code>log10(a)</code></td><td><code>np.log10(a)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Linear Algebra -->
+        <div class="cs-section" data-section="linalg">
+            <h3 class="cs-heading">Linear Algebra</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (NumPy / SciPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>inv(A)</code></td><td><code>np.linalg.inv(A)</code></td></tr>
+                    <tr><td><code>det(A)</code></td><td><code>np.linalg.det(A)</code></td></tr>
+                    <tr><td><code>eig(A)</code></td><td><code>np.linalg.eig(A)</code></td></tr>
+                    <tr><td><code>[U,S,V] = svd(A)</code></td><td><code>U, S, Vt = np.linalg.svd(A)</code></td></tr>
+                    <tr><td><code>rank(A)</code></td><td><code>np.linalg.matrix_rank(A)</code></td></tr>
+                    <tr><td><code>norm(A)</code></td><td><code>np.linalg.norm(A)</code></td></tr>
+                    <tr><td><code>trace(A)</code></td><td><code>np.trace(A)</code></td></tr>
+                    <tr><td><code>chol(A)</code></td><td><code>np.linalg.cholesky(A)</code></td></tr>
+                    <tr><td><code>[Q,R] = qr(A)</code></td><td><code>Q, R = np.linalg.qr(A)</code></td></tr>
+                    <tr><td><code>[L,U,P] = lu(A)</code></td><td><code>P, L, U = scipy.linalg.lu(A)</code></td></tr>
+                    <tr><td><code>pinv(A)</code></td><td><code>np.linalg.pinv(A)</code></td></tr>
+                    <tr><td><code>cross(a,b)</code></td><td><code>np.cross(a, b)</code></td></tr>
+                    <tr><td><code>dot(a,b)</code></td><td><code>np.dot(a, b)</code></td></tr>
+                    <tr><td><code>kron(A,B)</code></td><td><code>np.kron(A, B)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Statistics -->
+        <div class="cs-section" data-section="stats">
+            <h3 class="cs-heading">Statistics & Aggregation</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (NumPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>sum(a)</code></td><td><code>np.sum(a)</code> or <code>a.sum()</code></td></tr>
+                    <tr><td><code>mean(a)</code></td><td><code>np.mean(a)</code></td></tr>
+                    <tr><td><code>median(a)</code></td><td><code>np.median(a)</code></td></tr>
+                    <tr><td><code>std(a)</code></td><td><code>np.std(a, ddof=1)</code></td></tr>
+                    <tr><td><code>var(a)</code></td><td><code>np.var(a, ddof=1)</code></td></tr>
+                    <tr><td><code>max(a)</code></td><td><code>np.max(a)</code> or <code>a.max()</code></td></tr>
+                    <tr><td><code>min(a)</code></td><td><code>np.min(a)</code> or <code>a.min()</code></td></tr>
+                    <tr><td><code>[v, i] = max(a)</code></td><td><code>v = a.max(); i = a.argmax()</code></td></tr>
+                    <tr><td><code>cumsum(a)</code></td><td><code>np.cumsum(a)</code></td></tr>
+                    <tr><td><code>cumprod(a)</code></td><td><code>np.cumprod(a)</code></td></tr>
+                    <tr><td><code>sort(a)</code></td><td><code>np.sort(a)</code></td></tr>
+                    <tr><td><code>sortrows(A,col)</code></td><td><code>A[A[:,col].argsort()]</code></td></tr>
+                    <tr><td><code>unique(a)</code></td><td><code>np.unique(a)</code></td></tr>
+                    <tr><td><code>hist(a,n)</code></td><td><code>np.histogram(a, bins=n)</code></td></tr>
+                    <tr><td><code>corrcoef(a,b)</code></td><td><code>np.corrcoef(a, b)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Indexing & Reshaping -->
+        <div class="cs-section" data-section="indexing">
+            <h3 class="cs-heading">Indexing & Reshaping</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (NumPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>A(2,:)</code></td><td><code>A[1, :]</code></td></tr>
+                    <tr><td><code>A(:,3)</code></td><td><code>A[:, 2]</code></td></tr>
+                    <tr><td><code>A(1:3, 2:4)</code></td><td><code>A[0:3, 1:4]</code></td></tr>
+                    <tr><td><code>A(A > 5)</code></td><td><code>A[A > 5]</code></td></tr>
+                    <tr><td><code>find(A > 5)</code></td><td><code>np.where(A > 5)</code></td></tr>
+                    <tr><td><code>reshape(A,m,n)</code></td><td><code>A.reshape(m, n)</code></td></tr>
+                    <tr><td><code>A(:)</code></td><td><code>A.flatten()</code> or <code>A.ravel()</code></td></tr>
+                    <tr><td><code>squeeze(A)</code></td><td><code>A.squeeze()</code></td></tr>
+                    <tr><td><code>flipud(A)</code></td><td><code>np.flipud(A)</code></td></tr>
+                    <tr><td><code>fliplr(A)</code></td><td><code>np.fliplr(A)</code></td></tr>
+                    <tr><td><code>rot90(A)</code></td><td><code>np.rot90(A)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Signal Processing -->
+        <div class="cs-section" data-section="signal">
+            <h3 class="cs-heading">Signal Processing (SciPy)</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (SciPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>fft(x)</code></td><td><code>np.fft.fft(x)</code></td></tr>
+                    <tr><td><code>ifft(X)</code></td><td><code>np.fft.ifft(X)</code></td></tr>
+                    <tr><td><code>fftshift(X)</code></td><td><code>np.fft.fftshift(X)</code></td></tr>
+                    <tr><td><code>conv(a,b)</code></td><td><code>np.convolve(a, b)</code></td></tr>
+                    <tr><td><code>filter(b,a,x)</code></td><td><code>scipy.signal.lfilter(b,a,x)</code></td></tr>
+                    <tr><td><code>filtfilt(b,a,x)</code></td><td><code>scipy.signal.filtfilt(b,a,x)</code></td></tr>
+                    <tr><td><code>butter(n,Wn)</code></td><td><code>scipy.signal.butter(n,Wn)</code></td></tr>
+                    <tr><td><code>[pxx,f]=pwelch(x)</code></td><td><code>f,pxx=scipy.signal.welch(x)</code></td></tr>
+                    <tr><td><code>spectrogram(x)</code></td><td><code>scipy.signal.spectrogram(x)</code></td></tr>
+                    <tr><td><code>resample(x,n)</code></td><td><code>scipy.signal.resample(x,n)</code></td></tr>
+                    <tr><td><code>decimate(x,r)</code></td><td><code>scipy.signal.decimate(x,r)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Plotting -->
+        <div class="cs-section" data-section="plotting">
+            <h3 class="cs-heading">Plotting (Matplotlib)</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (Matplotlib)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>figure</code></td><td><code>plt.figure()</code></td></tr>
+                    <tr><td><code>plot(x,y)</code></td><td><code>plt.plot(x, y)</code></td></tr>
+                    <tr><td><code>subplot(2,1,1)</code></td><td><code>plt.subplot(2, 1, 1)</code></td></tr>
+                    <tr><td><code>fig, ax = subplots</code></td><td><code>fig, ax = plt.subplots()</code></td></tr>
+                    <tr><td><code>scatter(x,y)</code></td><td><code>plt.scatter(x, y)</code></td></tr>
+                    <tr><td><code>bar(x,y)</code></td><td><code>plt.bar(x, y)</code></td></tr>
+                    <tr><td><code>histogram(x)</code></td><td><code>plt.hist(x)</code></td></tr>
+                    <tr><td><code>imagesc(A)</code></td><td><code>plt.imshow(A)</code></td></tr>
+                    <tr><td><code>contour(X,Y,Z)</code></td><td><code>plt.contour(X, Y, Z)</code></td></tr>
+                    <tr><td><code>xlabel('x')</code></td><td><code>plt.xlabel('x')</code></td></tr>
+                    <tr><td><code>title('t')</code></td><td><code>plt.title('t')</code></td></tr>
+                    <tr><td><code>legend('a','b')</code></td><td><code>plt.legend(['a','b'])</code></td></tr>
+                    <tr><td><code>grid on</code></td><td><code>plt.grid(True)</code></td></tr>
+                    <tr><td><code>hold on</code></td><td><span class="cs-note">default behavior</span></td></tr>
+                    <tr><td><code>colorbar</code></td><td><code>plt.colorbar()</code></td></tr>
+                    <tr><td><code>xlim([0 10])</code></td><td><code>plt.xlim(0, 10)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Interpolation & Integration -->
+        <div class="cs-section" data-section="interp">
+            <h3 class="cs-heading">Interpolation & Integration</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (SciPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>interp1(x,y,xq)</code></td><td><code>scipy.interpolate.interp1d(x,y)(xq)</code></td></tr>
+                    <tr><td><code>interp2(X,Y,Z,...)</code></td><td><code>scipy.interpolate.interp2d(...)</code></td></tr>
+                    <tr><td><code>spline(x,y,xq)</code></td><td><code>scipy.interpolate.CubicSpline(x,y)(xq)</code></td></tr>
+                    <tr><td><code>trapz(y,x)</code></td><td><code>np.trapz(y, x)</code></td></tr>
+                    <tr><td><code>integral(@f,a,b)</code></td><td><code>scipy.integrate.quad(f, a, b)</code></td></tr>
+                    <tr><td><code>ode45(@f,tspan,y0)</code></td><td><code>scipy.integrate.solve_ivp(f,tspan,y0)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Optimization -->
+        <div class="cs-section" data-section="optim">
+            <h3 class="cs-heading">Optimization & Root Finding</h3>
+            <table class="cs-table">
+                <thead><tr><th>MATLAB</th><th>Python (SciPy)</th></tr></thead>
+                <tbody>
+                    <tr><td><code>fminsearch(f,x0)</code></td><td><code>scipy.optimize.minimize(f,x0)</code></td></tr>
+                    <tr><td><code>fminunc(f,x0)</code></td><td><code>scipy.optimize.minimize(f,x0)</code></td></tr>
+                    <tr><td><code>fzero(f,x0)</code></td><td><code>scipy.optimize.brentq(f,a,b)</code></td></tr>
+                    <tr><td><code>fsolve(f,x0)</code></td><td><code>scipy.optimize.fsolve(f,x0)</code></td></tr>
+                    <tr><td><code>lsqcurvefit(f,...)</code></td><td><code>scipy.optimize.curve_fit(f,...)</code></td></tr>
+                    <tr><td><code>polyfit(x,y,n)</code></td><td><code>np.polyfit(x, y, n)</code></td></tr>
+                    <tr><td><code>polyval(p,x)</code></td><td><code>np.polyval(p, x)</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Panel Footer -->
+    <div class="px-5 py-2.5 border-t border-zinc-800 shrink-0">
+        <p class="text-xs text-zinc-600 font-mono text-center">import numpy as np &middot; import scipy &middot; import matplotlib.pyplot as plt</p>
+    </div>
+</aside>
 
 <!-- ══════════════ STATUS BAR ══════════════ -->
 <footer class="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 px-4 py-1 z-40">
@@ -730,6 +1033,41 @@ function clearAllOutputs() {
     execCount = 0;
     renderNotebook();
     showToast('Outputs cleared');
+}
+
+// ═══════════════════════════════════════════
+//  CHEAT SHEET PANEL
+// ═══════════════════════════════════════════
+function toggleCheatSheet() {
+    const panel = document.getElementById('cheatsheet-panel');
+    const overlay = document.getElementById('cheatsheet-overlay');
+    const isOpen = panel.classList.contains('open');
+    if (isOpen) {
+        panel.classList.remove('open');
+        overlay.classList.add('hidden');
+    } else {
+        panel.classList.add('open');
+        overlay.classList.remove('hidden');
+        document.getElementById('cheatsheet-search').value = '';
+        filterCheatSheet('');
+        document.getElementById('cheatsheet-search').focus();
+    }
+}
+
+function filterCheatSheet(query) {
+    const q = query.toLowerCase().trim();
+    const sections = document.querySelectorAll('.cs-section');
+    sections.forEach(section => {
+        const rows = section.querySelectorAll('tbody tr');
+        let anyVisible = false;
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const match = !q || text.includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) anyVisible = true;
+        });
+        section.classList.toggle('hidden', !anyVisible && !!q);
+    });
 }
 
 // ═══════════════════════════════════════════
