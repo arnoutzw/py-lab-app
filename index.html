@@ -183,6 +183,83 @@
         }
         .cs-section.hidden { display: none; }
 
+        /* ── AI Assistant Panel ── */
+        #assistant-panel.open { transform: translateX(0); }
+        .ai-msg {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            max-width: 100%;
+            overflow-wrap: break-word;
+        }
+        .ai-msg-user {
+            background: #292524;
+            border: 1px solid #3f3f46;
+            color: #e2e8f0;
+        }
+        .ai-msg-assistant {
+            background: #1c1917;
+            border: 1px solid #27272a;
+            color: #d4d4d8;
+        }
+        .ai-msg-assistant pre {
+            background: #18181b;
+            border: 1px solid #3f3f46;
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            overflow-x: auto;
+            margin: 0.4rem 0;
+            position: relative;
+        }
+        .ai-msg-assistant code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: #fbbf24;
+        }
+        .ai-msg-assistant pre code {
+            color: #e2e8f0;
+            background: none;
+            padding: 0;
+        }
+        .ai-msg-assistant p { margin: 0.3rem 0; }
+        .ai-msg-assistant ul, .ai-msg-assistant ol { padding-left: 1.2rem; margin: 0.3rem 0; }
+        .ai-msg-assistant li { margin: 0.15rem 0; }
+        .ai-msg-assistant h1, .ai-msg-assistant h2, .ai-msg-assistant h3 {
+            font-weight: 600; color: #f4f4f5; margin: 0.5rem 0 0.25rem;
+        }
+        .ai-msg-assistant h1 { font-size: 1.05rem; }
+        .ai-msg-assistant h2 { font-size: 0.95rem; }
+        .ai-msg-assistant h3 { font-size: 0.88rem; }
+        .ai-msg-assistant blockquote {
+            border-left: 2px solid #f59e0b;
+            padding-left: 0.75rem;
+            color: #a1a1aa;
+            margin: 0.3rem 0;
+        }
+        .ai-code-insert-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            color: #a1a1aa;
+            font-size: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .ai-code-insert-btn:hover { background: #f59e0b; color: #18181b; border-color: #f59e0b; }
+        @keyframes aiPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        .ai-typing-dot { animation: aiPulse 1.2s ease-in-out infinite; }
+        .ai-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .ai-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
         /* ── Misc ── */
         .cell-output-scroll { max-height: 500px; overflow-y: auto; }
         body { padding-bottom: 44px; }
@@ -240,6 +317,10 @@
             <button onclick="toggleCheatSheet()" id="cheatsheet-btn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5" title="MATLAB → Python Cheat Sheet">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
                 <span class="hidden sm:inline">Cheat Sheet</span>
+            </button>
+            <button onclick="toggleAssistant()" id="assistant-btn" class="bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white text-xs font-mono font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm shadow-amber-500/20" title="Claude AI Assistant">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+                <span class="hidden sm:inline">Claude</span>
             </button>
         </div>
     </div>
@@ -493,6 +574,74 @@
     </div>
 </aside>
 
+<!-- ══════════════ AI ASSISTANT PANEL ══════════════ -->
+<div id="assistant-overlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="toggleAssistant()"></div>
+<aside id="assistant-panel" class="fixed top-0 right-0 h-full w-[480px] max-w-[92vw] bg-zinc-900 border-l border-zinc-800 z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <!-- Panel Header -->
+    <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
+        <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-md bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+            </div>
+            <h2 class="font-mono font-bold text-sm text-zinc-100">Claude Assistant</h2>
+            <span class="text-xs px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded font-mono">AI</span>
+        </div>
+        <div class="flex items-center gap-1">
+            <button onclick="clearAssistantChat()" class="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors text-xs font-mono" title="Clear conversation">Clear</button>
+            <button onclick="toggleAssistantSettings()" id="ai-settings-toggle" class="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors" title="API key settings">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+            <button onclick="toggleAssistant()" class="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- API Key Settings (collapsible) -->
+    <div id="ai-settings" class="px-5 py-3 border-b border-zinc-800 shrink-0 hidden">
+        <label class="text-xs font-mono text-zinc-500 block mb-1.5">Anthropic API Key</label>
+        <div class="flex gap-2">
+            <input id="ai-api-key" type="password" placeholder="sk-ant-..." oninput="saveApiKey(this.value)"
+                class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors">
+            <button onclick="toggleApiKeyVisibility()" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </div>
+        <p class="text-xs text-zinc-600 mt-1.5">Key is stored locally in your browser. Never sent anywhere except the Anthropic API.</p>
+    </div>
+
+    <!-- Messages -->
+    <div id="ai-messages" class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        <!-- Welcome message -->
+        <div class="text-center py-8">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+            </div>
+            <p class="text-sm text-zinc-400 mb-1">Claude Code Assistant</p>
+            <p class="text-xs text-zinc-600 max-w-xs mx-auto">Ask about Python, NumPy, SciPy, Matplotlib, or get help with your notebook code. Use the <span class="text-amber-500/70">Ask AI</span> button on any cell to include its code.</p>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="px-4 py-3 border-t border-zinc-800 shrink-0">
+        <div id="ai-context-bar" class="hidden mb-2 flex items-center gap-2 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-1.5">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span id="ai-context-label" class="text-xs font-mono text-zinc-400 flex-1 truncate"></span>
+            <button onclick="clearAiContext()" class="text-zinc-500 hover:text-zinc-300 transition-colors">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="flex gap-2">
+            <textarea id="ai-input" rows="1" placeholder="Ask Claude about your code..."
+                onkeydown="handleAiInputKey(event)" oninput="autoResizeAiInput(this)"
+                class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm font-mono px-3 py-2.5 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors resize-none max-h-32 overflow-y-auto"></textarea>
+            <button onclick="sendAiMessage()" id="ai-send-btn" class="bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-zinc-900 font-bold px-3 rounded-lg transition-colors shrink-0" title="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+        </div>
+    </div>
+</aside>
+
 <!-- ══════════════ STATUS BAR ══════════════ -->
 <footer class="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 px-4 py-1 z-40">
     <div class="max-w-6xl mx-auto flex items-center justify-between text-xs font-mono">
@@ -672,6 +821,7 @@ function makeCellDOM(cell) {
             <button onclick="runCell('${cell.id}')" class="${runBtnClass} px-2 py-1 rounded text-xs font-mono flex items-center gap-1 transition-colors" title="Run (Shift+Enter)">${ICO.play(12)} Run</button>
             <button onclick="moveCellDir('${cell.id}',-1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Up">${ICO.chevUp(14)}</button>
             <button onclick="moveCellDir('${cell.id}',1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Down">${ICO.chevDown(14)}</button>
+            <button onclick="askAiAboutCell('${cell.id}')" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 px-1.5 py-1 rounded text-xs font-mono transition-colors flex items-center gap-0.5" title="Ask Claude about this cell">${svgIcon('<path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>', 12)} AI</button>
             <button onclick="toggleCellType('${cell.id}')" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded text-xs font-mono transition-colors" title="Toggle Code/Markdown">${cell.type === 'code' ? ICO.code(14) : ICO.type(14)}</button>
             <button onclick="deleteCell('${cell.id}')" class="text-zinc-500 hover:text-red-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Delete Cell">${ICO.x(14)}</button>
         </div>
@@ -1068,6 +1218,298 @@ function filterCheatSheet(query) {
         });
         section.classList.toggle('hidden', !anyVisible && !!q);
     });
+}
+
+// ═══════════════════════════════════════════
+//  AI ASSISTANT
+// ═══════════════════════════════════════════
+let aiMessages = [];
+let aiStreaming = false;
+let aiContextCode = null;
+let aiContextError = null;
+let aiAbortController = null;
+
+const AI_SYSTEM_PROMPT = `You are Claude, an AI coding assistant embedded in PyLab, a browser-based Python notebook (like Jupyter) powered by Pyodide. The environment has NumPy, SciPy, and Matplotlib pre-loaded.
+
+Key context:
+- numpy is imported as np, scipy is available, matplotlib.pyplot is imported as plt
+- Code runs in Pyodide (WebAssembly Python) — no filesystem, no network, no pip install beyond what Pyodide supports
+- Plots use plt.show() and render inline as PNG
+- Dark theme: background #18181b, accent #f59e0b (amber)
+
+Guidelines:
+- Give concise, practical answers with code examples
+- When showing code, make it ready to paste and run in a notebook cell
+- If the user shares cell code or errors, focus on their specific issue
+- Use markdown formatting for clarity`;
+
+function toggleAssistant() {
+    const panel = document.getElementById('assistant-panel');
+    const overlay = document.getElementById('assistant-overlay');
+    const isOpen = panel.classList.contains('open');
+    if (isOpen) {
+        panel.classList.remove('open');
+        overlay.classList.add('hidden');
+    } else {
+        panel.classList.add('open');
+        overlay.classList.remove('hidden');
+        // Load saved API key
+        const saved = localStorage.getItem('pylab-anthropic-key') || '';
+        document.getElementById('ai-api-key').value = saved;
+        // Show settings if no key
+        if (!saved) {
+            document.getElementById('ai-settings').classList.remove('hidden');
+        }
+        setTimeout(() => document.getElementById('ai-input').focus(), 100);
+    }
+}
+
+function toggleAssistantSettings() {
+    document.getElementById('ai-settings').classList.toggle('hidden');
+}
+
+function toggleApiKeyVisibility() {
+    const inp = document.getElementById('ai-api-key');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function saveApiKey(val) {
+    localStorage.setItem('pylab-anthropic-key', val.trim());
+}
+
+function getApiKey() {
+    return (localStorage.getItem('pylab-anthropic-key') || '').trim();
+}
+
+function clearAssistantChat() {
+    aiMessages = [];
+    clearAiContext();
+    const container = document.getElementById('ai-messages');
+    container.innerHTML = `
+        <div class="text-center py-8">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+            </div>
+            <p class="text-sm text-zinc-400 mb-1">Claude Code Assistant</p>
+            <p class="text-xs text-zinc-600 max-w-xs mx-auto">Ask about Python, NumPy, SciPy, Matplotlib, or get help with your notebook code.</p>
+        </div>`;
+}
+
+function clearAiContext() {
+    aiContextCode = null;
+    aiContextError = null;
+    document.getElementById('ai-context-bar').classList.add('hidden');
+}
+
+function askAiAboutCell(cellId) {
+    const cell = cells.find(c => c.id === cellId);
+    if (!cell) return;
+    const code = cell.editor ? cell.editor.getValue() : cell.content;
+    aiContextCode = code;
+    aiContextError = cell.output && cell.output.error ? cell.output.error : null;
+
+    // Open assistant panel
+    const panel = document.getElementById('assistant-panel');
+    if (!panel.classList.contains('open')) toggleAssistant();
+
+    // Show context bar
+    const bar = document.getElementById('ai-context-bar');
+    const label = document.getElementById('ai-context-label');
+    bar.classList.remove('hidden');
+    const preview = code.split('\n')[0].substring(0, 50) + (code.length > 50 ? '...' : '');
+    label.textContent = aiContextError ? `Cell code + error` : `Cell: ${preview}`;
+
+    // Focus input with suggested prompt
+    const input = document.getElementById('ai-input');
+    if (aiContextError) {
+        input.value = 'Help me fix this error';
+    } else {
+        input.value = '';
+    }
+    input.focus();
+    autoResizeAiInput(input);
+}
+
+function handleAiInputKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAiMessage();
+    }
+}
+
+function autoResizeAiInput(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+}
+
+function addAiMessageToUI(role, content) {
+    const container = document.getElementById('ai-messages');
+    // Remove welcome if present
+    const welcome = container.querySelector('.text-center');
+    if (welcome) welcome.remove();
+
+    const div = document.createElement('div');
+    div.className = `ai-msg ai-msg-${role} anim-fade-in`;
+
+    if (role === 'user') {
+        div.textContent = content;
+    } else {
+        div.innerHTML = renderAiMarkdown(content);
+    }
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+}
+
+function renderAiMarkdown(text) {
+    let html = marked.parse(text || '');
+    // Add insert buttons to code blocks
+    html = html.replace(/<pre><code(?: class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g,
+        (match, lang, code) => {
+            const decoded = code.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+            const escaped = decoded.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+            return `<pre><code${lang ? ` class="language-${lang}"` : ''}>${code}</code><button class="ai-code-insert-btn" onclick="insertAiCode('${escaped}')" title="Insert into new cell">Insert</button></pre>`;
+        });
+    return html;
+}
+
+function insertAiCode(code) {
+    // Unescape
+    const decoded = code.replace(/\\n/g, '\n').replace(/\\'/g, "'").replace(/\\\\/g, '\\');
+    const selIdx = selectedCellId ? idx(selectedCellId) : cells.length - 1;
+    createCell('code', decoded, selIdx);
+    showToast('Code inserted into new cell');
+}
+
+async function sendAiMessage() {
+    const input = document.getElementById('ai-input');
+    const text = input.value.trim();
+    if (!text || aiStreaming) return;
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        document.getElementById('ai-settings').classList.remove('hidden');
+        showToast('Please enter your Anthropic API key');
+        document.getElementById('ai-api-key').focus();
+        return;
+    }
+
+    // Build user message with context
+    let userContent = text;
+    if (aiContextCode) {
+        userContent = text + '\n\n```python\n' + aiContextCode + '\n```';
+        if (aiContextError) {
+            userContent += '\n\nError output:\n```\n' + aiContextError + '\n```';
+        }
+    }
+
+    // Show user message (display only the typed text)
+    addAiMessageToUI('user', text + (aiContextCode ? '\n[attached cell code' + (aiContextError ? ' + error' : '') + ']' : ''));
+
+    // Add to conversation
+    aiMessages.push({ role: 'user', content: userContent });
+
+    // Clear input and context
+    input.value = '';
+    autoResizeAiInput(input);
+    clearAiContext();
+
+    // Show typing indicator
+    const container = document.getElementById('ai-messages');
+    const typingDiv = document.createElement('div');
+    typingDiv.id = 'ai-typing';
+    typingDiv.className = 'flex items-center gap-1.5 px-2 py-2';
+    typingDiv.innerHTML = `
+        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full bg-amber-500"></span>`;
+    container.appendChild(typingDiv);
+    container.scrollTop = container.scrollHeight;
+
+    // Disable send
+    aiStreaming = true;
+    document.getElementById('ai-send-btn').disabled = true;
+
+    try {
+        aiAbortController = new AbortController();
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true',
+            },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-5-20250929',
+                max_tokens: 4096,
+                system: AI_SYSTEM_PROMPT,
+                messages: aiMessages.slice(-20), // Keep last 20 messages for context
+                stream: true,
+            }),
+            signal: aiAbortController.signal,
+        });
+
+        if (!resp.ok) {
+            const errBody = await resp.text();
+            let errMsg = `API error ${resp.status}`;
+            try { errMsg = JSON.parse(errBody).error?.message || errMsg; } catch {}
+            throw new Error(errMsg);
+        }
+
+        // Remove typing indicator
+        typingDiv.remove();
+
+        // Stream the response
+        let fullText = '';
+        const msgDiv = addAiMessageToUI('assistant', '');
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+                const data = line.slice(6);
+                if (data === '[DONE]') continue;
+                try {
+                    const evt = JSON.parse(data);
+                    if (evt.type === 'content_block_delta' && evt.delta?.text) {
+                        fullText += evt.delta.text;
+                        msgDiv.innerHTML = renderAiMarkdown(fullText);
+                        container.scrollTop = container.scrollHeight;
+                    }
+                } catch {}
+            }
+        }
+
+        aiMessages.push({ role: 'assistant', content: fullText });
+    } catch (err) {
+        typingDiv.remove();
+        if (err.name !== 'AbortError') {
+            const errDiv = document.createElement('div');
+            errDiv.className = 'ai-msg ai-msg-assistant anim-fade-in border-red-500/30 bg-red-500/5';
+            errDiv.innerHTML = `<p class="text-red-400 text-xs font-mono">${esc(err.message)}</p>`;
+            container.appendChild(errDiv);
+            container.scrollTop = container.scrollHeight;
+            // Remove failed assistant turn from messages
+            if (aiMessages.length && aiMessages[aiMessages.length - 1].role === 'user') {
+                // Keep user message for retry
+            }
+        }
+    } finally {
+        aiStreaming = false;
+        aiAbortController = null;
+        document.getElementById('ai-send-btn').disabled = false;
+        document.getElementById('ai-input').focus();
+    }
 }
 
 // ═══════════════════════════════════════════
