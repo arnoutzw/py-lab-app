@@ -262,6 +262,7 @@
 
         /* ── Misc ── */
         .cell-output-scroll { max-height: 500px; overflow-y: auto; }
+        .cell-wrap { contain: layout style; }
         body { padding-bottom: 44px; }
     </style>
 </head>
@@ -1058,8 +1059,11 @@ async function runCell(cellId) {
     execCount++;
     cell.executionCount = execCount;
     cell.output = null;
-    refreshCellUI(cell);
-    if (!isRunningAll) updateStatusBar();
+    // During Run All, skip intermediate UI (spinner/label flash) — only update once when done
+    if (!isRunningAll) {
+        refreshCellUI(cell);
+        updateStatusBar();
+    }
 
     try {
         pyodide.globals.set('__user_code__', code);
