@@ -698,6 +698,7 @@ let execCount = 0;
 let cellIdSeq = 0;
 let kernelReady = false;
 let kernelBusy = false;
+let isRunningAll = false;
 
 // ═══════════════════════════════════════════
 //  ICONS (inline SVG helpers)
@@ -775,14 +776,26 @@ function toggleCellType(id) {
     selectCell(id);
 }
 
-function selectCell(id) {
+function selectCell(id, scrollTo) {
     selectedCellId = id;
     document.querySelectorAll('.cell-wrap').forEach(el => {
         el.classList.toggle('border-l-amber-500', el.dataset.cellId === id);
         el.classList.toggle('border-l-zinc-800', el.dataset.cellId !== id);
     });
     const cell = cells.find(c => c.id === id);
-    if (cell && cell.editor) setTimeout(() => cell.editor.focus(), 10);
+    if (cell && cell.editor) {
+        setTimeout(() => {
+            // Focus editor without scrolling the page (prevents jump-to-bottom)
+            const sy = window.scrollY;
+            cell.editor.focus();
+            window.scrollTo(0, sy);
+            // Only scroll into view when explicitly requested (e.g. runCellAndAdvance)
+            if (scrollTo) {
+                const wrap = document.querySelector(`.cell-wrap[data-cell-id="${id}"]`);
+                if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 10);
+    }
 }
 
 function addCellAfter(afterIdx, type) { createCell(type, '', afterIdx); }
@@ -1029,7 +1042,7 @@ async function runCell(cellId) {
         return;
     }
 
-    if (!kernelReady || kernelBusy) {
+    if (!isRunningAll && (!kernelReady || kernelBusy)) {
         showToast(kernelBusy ? 'Kernel is busy — wait for current cell to finish.' : 'Kernel is still loading…');
         return;
     }
@@ -1041,12 +1054,12 @@ async function runCell(cellId) {
     if (cell.editor) cell.content = cell.editor.getValue();
 
     cell.isRunning = true;
-    kernelBusy = true;
+    if (!isRunningAll) kernelBusy = true;
     execCount++;
     cell.executionCount = execCount;
     cell.output = null;
     refreshCellUI(cell);
-    updateStatusBar();
+    if (!isRunningAll) updateStatusBar();
 
     try {
         pyodide.globals.set('__user_code__', code);
@@ -1104,9 +1117,9 @@ __json.dumps({'stdout': __out.getvalue(), 'stderr': __err.getvalue(), 'error': _
     }
 
     cell.isRunning = false;
-    kernelBusy = false;
+    if (!isRunningAll) kernelBusy = false;
     refreshCellUI(cell);
-    updateStatusBar();
+    if (!isRunningAll) updateStatusBar();
 }
 
 function refreshCellUI(cell) {
@@ -1138,47 +1151,59 @@ function refreshCellUI(cell) {
         }
     }
 
-    // ── Update output area ──
-    const oldOutput = wrap.querySelector('.cell-output-scroll');
-    if (oldOutput) oldOutput.remove();
+    // ── Update output area only when cell is done (not during running state) ──
+    // This prevents output from disappearing then reappearing, which causes bounce/flash.
+    // During isRunning=true, we keep any existing output visible until new output replaces it.
+    if (!cell.isRunning) {
+        const oldOutput = wrap.querySelector('.cell-output-scroll');
+        if (oldOutput) oldOutput.remove();
 
-    if (cell.output) {
-        const o = cell.output;
-        let parts = [];
-        if (o.stdout) parts.push(`<pre class="font-mono text-sm text-zinc-300 whitespace-pre-wrap">${esc(o.stdout)}</pre>`);
-        if (o.result) parts.push(`<pre class="font-mono text-sm text-zinc-100 whitespace-pre-wrap">${esc(o.result)}</pre>`);
-        if (o.figures && o.figures.length) {
-            o.figures.forEach(f => parts.push(`<img src="data:image/png;base64,${f}" class="max-w-full rounded-lg my-1">`));
-        }
-        if (o.stderr) parts.push(`<pre class="font-mono text-xs text-yellow-400/80 whitespace-pre-wrap">${esc(o.stderr)}</pre>`);
-        if (o.error) parts.push(`<pre class="font-mono text-sm text-red-400 whitespace-pre-wrap bg-red-500/10 rounded-lg p-3">${esc(o.error)}</pre>`);
-        if (parts.length) {
-            const outDiv = document.createElement('div');
-            outDiv.className = 'border-t border-zinc-800/60 px-4 py-3 cell-output-scroll';
-            outDiv.innerHTML = `${cell.type === 'code' && cell.executionCount ? `<span class="font-mono text-xs text-zinc-600 block mb-1.5">Out [${cell.executionCount}]:</span>` : ''}<div class="flex flex-col gap-2">${parts.join('')}</div>`;
-            wrap.appendChild(outDiv);
+        if (cell.output) {
+            const o = cell.output;
+            let parts = [];
+            if (o.stdout) parts.push(`<pre class="font-mono text-sm text-zinc-300 whitespace-pre-wrap">${esc(o.stdout)}</pre>`);
+            if (o.result) parts.push(`<pre class="font-mono text-sm text-zinc-100 whitespace-pre-wrap">${esc(o.result)}</pre>`);
+            if (o.figures && o.figures.length) {
+                o.figures.forEach(f => parts.push(`<img src="data:image/png;base64,${f}" class="max-w-full rounded-lg my-1">`));
+            }
+            if (o.stderr) parts.push(`<pre class="font-mono text-xs text-yellow-400/80 whitespace-pre-wrap">${esc(o.stderr)}</pre>`);
+            if (o.error) parts.push(`<pre class="font-mono text-sm text-red-400 whitespace-pre-wrap bg-red-500/10 rounded-lg p-3">${esc(o.error)}</pre>`);
+            if (parts.length) {
+                const outDiv = document.createElement('div');
+                outDiv.className = 'border-t border-zinc-800/60 px-4 py-3 cell-output-scroll';
+                outDiv.innerHTML = `${cell.type === 'code' && cell.executionCount ? `<span class="font-mono text-xs text-zinc-600 block mb-1.5">Out [${cell.executionCount}]:</span>` : ''}<div class="flex flex-col gap-2">${parts.join('')}</div>`;
+                wrap.appendChild(outDiv);
+            }
         }
     }
-
-    updateStatusBar();
 }
 
 async function runCellAndAdvance(cellId) {
     await runCell(cellId);
     const i = idx(cellId);
     if (i < cells.length - 1) {
-        selectCell(cells[i + 1].id);
+        selectCell(cells[i + 1].id, true);
     } else {
         createCell('code', '', i);
     }
 }
 
 async function runAllCells() {
+    if (!kernelReady || kernelBusy) {
+        showToast(kernelBusy ? 'Kernel is busy — wait for current cell to finish.' : 'Kernel is still loading…');
+        return;
+    }
+    isRunningAll = true;
+    kernelBusy = true;
+    updateStatusBar();
     for (const cell of cells) {
         if (cell.type === 'code' || cell.type === 'markdown') {
             await runCell(cell.id);
         }
     }
+    isRunningAll = false;
+    kernelBusy = false;
+    updateStatusBar();
     showToast('All cells executed');
 }
 
