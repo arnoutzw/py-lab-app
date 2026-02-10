@@ -185,6 +185,11 @@
 
         /* ── AI Assistant Panel ── */
         #assistant-panel.open { transform: translateX(0); }
+        #assistant-panel.settled { transform: none; }
+        .api-key-masked {
+            -webkit-text-security: disc;
+            text-security: disc;
+        }
         .ai-msg {
             padding: 0.75rem 1rem;
             border-radius: 0.5rem;
@@ -608,8 +613,8 @@
         <div id="ai-key-claude">
             <label class="text-xs font-mono text-zinc-500 block mb-1.5">Anthropic API Key <span class="text-amber-500/60">(Claude)</span></label>
             <div class="flex gap-2">
-                <input id="ai-api-key-claude" type="password" placeholder="sk-ant-..." oninput="saveProviderKey('claude', this.value)" onpaste="setTimeout(()=>saveProviderKey('claude', this.value),0)" onchange="saveProviderKey('claude', this.value)" autocomplete="off"
-                    class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors">
+                <input id="ai-api-key-claude" type="text" placeholder="sk-ant-..." oninput="saveProviderKey('claude', this.value)" onpaste="setTimeout(()=>saveProviderKey('claude', this.value),0)" onchange="saveProviderKey('claude', this.value)" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true"
+                    class="api-key-masked flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors">
                 <button onclick="toggleKeyVisibility('ai-api-key-claude')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -619,8 +624,8 @@
         <div id="ai-key-gemini">
             <label class="text-xs font-mono text-zinc-500 block mb-1.5">Google API Key <span class="text-blue-400/60">(Gemini)</span></label>
             <div class="flex gap-2">
-                <input id="ai-api-key-gemini" type="password" placeholder="AIza..." oninput="saveProviderKey('gemini', this.value)" onpaste="setTimeout(()=>saveProviderKey('gemini', this.value),0)" onchange="saveProviderKey('gemini', this.value)" autocomplete="off"
-                    class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-blue-500/50 placeholder-zinc-600 transition-colors">
+                <input id="ai-api-key-gemini" type="text" placeholder="AIza..." oninput="saveProviderKey('gemini', this.value)" onpaste="setTimeout(()=>saveProviderKey('gemini', this.value),0)" onchange="saveProviderKey('gemini', this.value)" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true"
+                    class="api-key-masked flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-blue-500/50 placeholder-zinc-600 transition-colors">
                 <button onclick="toggleKeyVisibility('ai-api-key-gemini')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -1351,11 +1356,20 @@ function toggleAssistant() {
     const overlay = document.getElementById('assistant-overlay');
     const isOpen = panel.classList.contains('open');
     if (isOpen) {
+        // Re-enable transform for the close animation
+        panel.classList.remove('settled');
         panel.classList.remove('open');
         overlay.classList.add('hidden');
     } else {
         panel.classList.add('open');
         overlay.classList.remove('hidden');
+        // After slide-in completes, remove transform so inputs work reliably
+        panel.addEventListener('transitionend', function handler() {
+            panel.removeEventListener('transitionend', handler);
+            if (panel.classList.contains('open')) {
+                panel.classList.add('settled');
+            }
+        });
         // Restore provider selection
         document.getElementById('ai-provider-select').value = aiProvider;
         switchAiProvider(aiProvider);
@@ -1368,9 +1382,9 @@ function toggleAssistant() {
             : localStorage.getItem('pylab-anthropic-key');
         if (!currentKey) {
             document.getElementById('ai-settings').classList.remove('hidden');
-            setTimeout(() => document.getElementById(aiProvider === 'gemini' ? 'ai-api-key-gemini' : 'ai-api-key-claude').focus(), 300);
+            setTimeout(() => document.getElementById(aiProvider === 'gemini' ? 'ai-api-key-gemini' : 'ai-api-key-claude').focus(), 350);
         } else {
-            setTimeout(() => document.getElementById('ai-input').focus(), 100);
+            setTimeout(() => document.getElementById('ai-input').focus(), 350);
         }
     }
 }
@@ -1381,7 +1395,7 @@ function toggleAssistantSettings() {
 
 function toggleKeyVisibility(inputId) {
     const inp = document.getElementById(inputId);
-    inp.type = inp.type === 'password' ? 'text' : 'password';
+    inp.classList.toggle('api-key-masked');
 }
 
 function saveProviderKey(provider, val) {
