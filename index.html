@@ -1368,8 +1368,10 @@ function toggleAssistant() {
             : localStorage.getItem('pylab-anthropic-key');
         if (!currentKey) {
             document.getElementById('ai-settings').classList.remove('hidden');
+            setTimeout(() => document.getElementById(aiProvider === 'gemini' ? 'ai-api-key-gemini' : 'ai-api-key-claude').focus(), 300);
+        } else {
+            setTimeout(() => document.getElementById('ai-input').focus(), 100);
         }
-        setTimeout(() => document.getElementById('ai-input').focus(), 100);
     }
 }
 
