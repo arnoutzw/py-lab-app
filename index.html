@@ -28,6 +28,11 @@
     <!-- Marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
+    <!-- Firebase SDKs (same project as parent portfolio) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
     <script>
     tailwind.config = {
         theme: {
@@ -304,6 +309,8 @@
             <span class="font-mono font-bold text-zinc-100 text-sm hidden sm:inline">PyLab</span>
             <span class="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded font-mono hidden sm:inline">PWA</span>
         </div>
+        <!-- Center: user info (SSO) -->
+        <div id="user-info" class="hidden flex items-center gap-2 shrink-0"></div>
         <!-- Right: toolbar -->
         <div class="flex items-center gap-1.5 flex-wrap justify-end">
             <button onclick="runAllCells()" class="bg-amber-500 hover:bg-amber-400 text-zinc-900 font-mono font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5" title="Run All Cells">
@@ -319,6 +326,19 @@
             <button onclick="document.getElementById('file-input').click()" class="text-zinc-400 hover:text-amber-400 hover:bg-zinc-800 px-2 py-1.5 rounded-lg transition-colors" title="Load Notebook">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </button>
+            <!-- Cloud save/load (visible when signed in via SSO) -->
+            <div id="cloud-controls" class="hidden flex items-center gap-1">
+                <div class="w-px h-5 bg-zinc-700 mx-1 hidden sm:block"></div>
+                <button onclick="saveNotebookToCloud()" class="text-zinc-400 hover:text-amber-400 hover:bg-zinc-800 px-2 py-1.5 rounded-lg transition-colors flex items-center gap-1" title="Save to Cloud">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <span class="hidden sm:inline text-xs font-mono">Save</span>
+                </button>
+                <button onclick="loadNotebookFromCloud(false)" class="text-zinc-400 hover:text-amber-400 hover:bg-zinc-800 px-2 py-1.5 rounded-lg transition-colors flex items-center gap-1" title="Load from Cloud">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/></svg>
+                    <span class="hidden sm:inline text-xs font-mono">Load</span>
+                </button>
+                <span id="cloud-status" class="hidden text-xs font-mono text-zinc-500"></span>
+            </div>
             <div class="w-px h-5 bg-zinc-700 mx-1 hidden sm:block"></div>
             <button onclick="toggleCheatSheet()" id="cheatsheet-btn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5" title="MATLAB → Python Cheat Sheet">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
@@ -682,6 +702,7 @@
             <span class="text-zinc-700 hidden sm:inline">│</span>
             <span class="text-zinc-600 hidden sm:inline">Ctrl+Enter: Run</span>
             <span class="text-zinc-700 hidden md:inline">│</span>
+            <span id="sso-status" class="text-zinc-600 hidden md:inline"></span>
             <span class="text-zinc-500 hidden md:inline">NumPy · SciPy · Matplotlib</span>
         </div>
     </div>
@@ -705,6 +726,204 @@ let cellIdSeq = 0;
 let kernelReady = false;
 let kernelBusy = false;
 let isRunningAll = false;
+
+// ═══════════════════════════════════════════
+//  SSO & FIREBASE STATE
+// ═══════════════════════════════════════════
+let currentUser = null;
+let isAdmin = false;
+let firebaseApp = null;
+let db = null;
+let firebaseAuth = null;
+let ssoReady = false;
+let autoSaveTimer = null;
+const AUTOSAVE_DELAY = 3000; // ms after last change
+
+// Initialize Firebase
+(function initFirebase() {
+    try {
+        firebaseApp = firebase.initializeApp({
+            apiKey: "AIzaSyAqRWVgti-CuXzr5AkhDKmPlu7iA2MQpUg",
+            authDomain: "arnout-s-homelab.firebaseapp.com",
+            projectId: "arnout-s-homelab",
+            storageBucket: "arnout-s-homelab.firebasestorage.app",
+            messagingSenderId: "258011834485",
+            appId: "1:258011834485:web:5afb1efaa303b4dd93f03c",
+        });
+        db = firebaseApp.firestore();
+        firebaseAuth = firebaseApp.auth();
+    } catch (err) {
+        console.warn('Firebase init failed:', err.message);
+    }
+})();
+
+// ── SSO Auth Receiver (postMessage from parent portfolio) ──
+window.addEventListener('message', async (event) => {
+    const data = event.data;
+    if (!data || data.type !== 'admin-auth') return;
+
+    isAdmin = !!data.isAdmin;
+
+    if (data.sso) {
+        currentUser = {
+            uid: data.sso.uid,
+            email: data.sso.email,
+            displayName: data.sso.displayName,
+            photoURL: data.sso.photoURL,
+            idToken: data.sso.idToken,
+        };
+
+        // Authenticate with Firebase using the parent's credential
+        if (firebaseAuth && data.sso.idToken) {
+            try {
+                const credential = firebase.auth.GoogleAuthProvider.credential(data.sso.idToken);
+                await firebaseAuth.signInWithCredential(credential);
+            } catch (err) {
+                console.warn('SSO Firebase sign-in failed:', err.message);
+            }
+        }
+
+        ssoReady = true;
+        onUserSignedIn(currentUser);
+    } else {
+        const wasSignedIn = !!currentUser;
+        currentUser = null;
+        ssoReady = false;
+
+        if (firebaseAuth) {
+            try { await firebaseAuth.signOut(); } catch {}
+        }
+
+        if (wasSignedIn) onUserSignedOut();
+    }
+});
+
+function onUserSignedIn(user) {
+    updateUserUI();
+    // Load user's saved notebook from Firestore
+    loadNotebookFromCloud(true);
+}
+
+function onUserSignedOut() {
+    updateUserUI();
+    showToast('Signed out — changes won\'t be saved to cloud');
+}
+
+function updateUserUI() {
+    const userInfo = document.getElementById('user-info');
+    const cloudControls = document.getElementById('cloud-controls');
+    if (currentUser) {
+        if (userInfo) {
+            userInfo.classList.remove('hidden');
+            userInfo.innerHTML = `
+                <img src="${esc(currentUser.photoURL || '')}" alt="" referrerpolicy="no-referrer"
+                     class="w-6 h-6 rounded-full border border-amber-500/30"
+                     onerror="this.style.display='none'">
+                <span class="text-xs font-mono text-zinc-400 hidden sm:inline truncate max-w-[120px]">${esc(currentUser.displayName || currentUser.email)}</span>`;
+        }
+        if (cloudControls) cloudControls.classList.remove('hidden');
+    } else {
+        if (userInfo) {
+            userInfo.classList.add('hidden');
+            userInfo.innerHTML = '';
+        }
+        if (cloudControls) cloudControls.classList.add('hidden');
+    }
+    updateCloudStatus('');
+    updateStatusBar();
+}
+
+function updateCloudStatus(msg, isError) {
+    const el = document.getElementById('cloud-status');
+    if (!el) return;
+    if (msg) {
+        el.textContent = msg;
+        el.className = `text-xs font-mono ${isError ? 'text-red-400' : 'text-zinc-500'}`;
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
+    }
+}
+
+// ── Firestore Save / Load ──
+function getNotebookData() {
+    cells.forEach(c => { if (c.editor) c.content = c.editor.getValue(); });
+    return {
+        version: 1,
+        app: 'PyLab',
+        savedAt: new Date().toISOString(),
+        cells: cells.map(c => ({
+            type: c.type,
+            content: c.content,
+            executionCount: c.executionCount,
+            output: c.output,
+        }))
+    };
+}
+
+async function saveNotebookToCloud() {
+    if (!currentUser || !db) return;
+    updateCloudStatus('Saving…');
+    try {
+        const data = getNotebookData();
+        await db.collection('users').doc(currentUser.uid)
+            .collection('app_data').doc('pylab_notebook')
+            .set(data, { merge: false });
+        updateCloudStatus('Saved');
+        setTimeout(() => updateCloudStatus(''), 2000);
+    } catch (err) {
+        console.warn('Cloud save failed:', err.message);
+        updateCloudStatus('Save failed', true);
+        setTimeout(() => updateCloudStatus(''), 4000);
+    }
+}
+
+async function loadNotebookFromCloud(silent) {
+    if (!currentUser || !db) return;
+    if (!silent) updateCloudStatus('Loading…');
+    try {
+        const doc = await db.collection('users').doc(currentUser.uid)
+            .collection('app_data').doc('pylab_notebook').get();
+        if (doc.exists) {
+            const data = doc.data();
+            if (data.cells && Array.isArray(data.cells) && data.cells.length > 0) {
+                cells = data.cells.map(c => ({
+                    id: genId(),
+                    type: c.type || 'code',
+                    content: c.content || '',
+                    executionCount: null, // don't restore exec counts — kernel is fresh
+                    output: c.output || null,
+                    editor: null,
+                    isRunning: false,
+                    rendered: c.type === 'markdown',
+                }));
+                selectedCellId = cells.length ? cells[0].id : null;
+                renderNotebook();
+                const when = data.savedAt ? ` (${new Date(data.savedAt).toLocaleString()})` : '';
+                showToast('Notebook restored from cloud' + when);
+                updateCloudStatus('Loaded');
+                setTimeout(() => updateCloudStatus(''), 2000);
+                return;
+            }
+        }
+        if (!silent) {
+            showToast('No saved notebook found');
+            updateCloudStatus('');
+        }
+    } catch (err) {
+        console.warn('Cloud load failed:', err.message);
+        if (!silent) updateCloudStatus('Load failed', true);
+        setTimeout(() => updateCloudStatus(''), 4000);
+    }
+}
+
+function scheduleAutoSave() {
+    if (!currentUser || !db) return;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+        saveNotebookToCloud();
+    }, AUTOSAVE_DELAY);
+}
 
 // ═══════════════════════════════════════════
 //  ICONS (inline SVG helpers)
@@ -759,6 +978,7 @@ function deleteCell(id) {
     if (cells.length === 0) createCell('code', '', -1);
     else if (selectedCellId === id) selectCell(cells[Math.min(i, cells.length - 1)].id);
     else renderNotebook();
+    scheduleAutoSave();
 }
 
 function moveCellDir(id, dir) {
@@ -768,6 +988,7 @@ function moveCellDir(id, dir) {
     [cells[i], cells[ni]] = [cells[ni], cells[i]];
     renderNotebook();
     selectCell(id);
+    scheduleAutoSave();
 }
 
 function toggleCellType(id) {
@@ -780,6 +1001,7 @@ function toggleCellType(id) {
     cell.executionCount = null;
     renderNotebook();
     selectCell(id);
+    scheduleAutoSave();
 }
 
 function selectCell(id, scrollTo) {
@@ -938,6 +1160,7 @@ function initEditor(cell) {
         }
     });
     cell.editor.on('focus', () => selectCell(cell.id));
+    cell.editor.on('changes', () => scheduleAutoSave());
 }
 
 function unrenderMarkdown(id) {
@@ -967,6 +1190,17 @@ function updateStatusBar() {
         label.className = 'text-green-400';
     }
     count.textContent = `${cells.length} cell${cells.length !== 1 ? 's' : ''}`;
+
+    const ssoStatus = document.getElementById('sso-status');
+    if (ssoStatus) {
+        if (currentUser) {
+            ssoStatus.textContent = `☁ ${currentUser.displayName || currentUser.email}`;
+            ssoStatus.className = 'text-amber-500/60 hidden md:inline';
+        } else {
+            ssoStatus.textContent = '';
+            ssoStatus.className = 'text-zinc-600 hidden md:inline';
+        }
+    }
 }
 
 // ═══════════════════════════════════════════
@@ -1128,7 +1362,10 @@ __json.dumps({'stdout': __out.getvalue(), 'stderr': __err.getvalue(), 'error': _
     cell.isRunning = false;
     if (!isRunningAll) kernelBusy = false;
     refreshCellUI(cell);
-    if (!isRunningAll) updateStatusBar();
+    if (!isRunningAll) {
+        updateStatusBar();
+        scheduleAutoSave();
+    }
 }
 
 function refreshCellUI(cell) {
@@ -1214,6 +1451,7 @@ async function runAllCells() {
     kernelBusy = false;
     updateStatusBar();
     showToast('All cells executed');
+    scheduleAutoSave();
 }
 
 async function restartKernel() {
