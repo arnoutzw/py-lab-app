@@ -1012,9 +1012,15 @@ function selectCell(id, scrollTo) {
     });
     const cell = cells.find(c => c.id === id);
     if (cell && cell.editor) {
-        setTimeout(() => {
-            // Focus editor without scrolling the page (prevents jump-to-bottom)
-            const sy = window.scrollY;
+        // Capture scroll position synchronously, before any focus-induced scroll
+        // Only save on the first call in a rapid sequence (e.g. mousedown + focus)
+        if (!selectCell._pending) selectCell._scrollY = window.scrollY;
+        else clearTimeout(selectCell._pending);
+        selectCell._pending = setTimeout(() => {
+            const sy = selectCell._scrollY;
+            selectCell._pending = null;
+            selectCell._scrollY = null;
+            // Focus editor without scrolling the page
             cell.editor.focus();
             window.scrollTo(0, sy);
             // Only scroll into view when explicitly requested (e.g. runCellAndAdvance)
