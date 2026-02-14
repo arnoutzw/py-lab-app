@@ -641,9 +641,21 @@
             </div>
             <p class="text-xs text-zinc-600 mt-1">Key stored locally, sent only to Anthropic API.</p>
         </div>
-        <!-- Gemini Google Sign-In -->
+        <!-- Gemini API Key -->
         <div id="ai-key-gemini">
-            <label class="text-xs font-mono text-zinc-500 block mb-1.5">Google Account <span class="text-blue-400/60">(Gemini)</span></label>
+            <label class="text-xs font-mono text-zinc-500 block mb-1.5">Gemini API Key <span class="text-blue-400/60">(Gemini)</span></label>
+            <div class="flex gap-2">
+                <input id="ai-api-key-gemini" type="text" placeholder="AIza..." oninput="saveProviderKey('gemini', this.value)" onpaste="setTimeout(()=>saveProviderKey('gemini', this.value),0)" onchange="saveProviderKey('gemini', this.value)" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true"
+                    class="api-key-masked flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-blue-500/50 placeholder-zinc-600 transition-colors">
+                <button onclick="toggleKeyVisibility('ai-api-key-gemini')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+            <p class="text-xs text-zinc-600 mt-1">Key stored locally, sent only to Google API.</p>
+        </div>
+        <!-- Google Sign-In (cloud save) -->
+        <div>
+            <label class="text-xs font-mono text-zinc-500 block mb-1.5">Google Account <span class="text-emerald-400/60">(Cloud Save)</span></label>
             <!-- Sign-in button (shown when not authenticated) -->
             <button id="gemini-signin-btn" onclick="signInForGemini()"
                 class="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 text-xs font-mono px-3 py-2.5 rounded-lg transition-colors">
@@ -658,17 +670,7 @@
                 </div>
                 <button onclick="signOutGemini()" class="text-xs font-mono text-zinc-500 hover:text-zinc-300 shrink-0 ml-2 transition-colors">Sign out</button>
             </div>
-            <!-- API key fallback -->
-            <details class="mt-2">
-                <summary class="text-xs text-zinc-600 cursor-pointer hover:text-zinc-400 select-none">Or use API key instead</summary>
-                <div class="flex gap-2 mt-1.5">
-                    <input id="ai-api-key-gemini" type="text" placeholder="AIza..." oninput="saveProviderKey('gemini', this.value)" onpaste="setTimeout(()=>saveProviderKey('gemini', this.value),0)" onchange="saveProviderKey('gemini', this.value)" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true"
-                        class="api-key-masked flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-blue-500/50 placeholder-zinc-600 transition-colors">
-                    <button onclick="toggleKeyVisibility('ai-api-key-gemini')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                </div>
-            </details>
+            <p class="text-xs text-zinc-600 mt-1">Sign in to sync notebooks across devices.</p>
         </div>
     </div>
 
@@ -1582,7 +1584,7 @@ let aiContextCode = null;
 let aiContextError = null;
 let aiAbortController = null;
 let aiProvider = localStorage.getItem('pylab-ai-provider') || 'claude';
-let geminiAccessToken = null;
+// geminiUser tracks Google sign-in state (for cloud save / UI)
 let geminiUser = null;
 
 const AI_SYSTEM_PROMPT = `You are an AI coding assistant embedded in PyLab, a browser-based Python notebook (like Jupyter) powered by Pyodide. The environment has NumPy, SciPy, and Matplotlib pre-loaded.
@@ -1672,27 +1674,24 @@ function saveProviderKey(provider, val) {
 }
 
 function getProviderKey(provider) {
-    if (provider === 'gemini' && geminiAccessToken) return geminiAccessToken;
     const key = provider === 'gemini' ? 'pylab-gemini-key' : 'pylab-anthropic-key';
     return (localStorage.getItem(key) || '').trim();
 }
 
 async function signInForGemini() {
     if (!firebaseAuth) {
-        showToast('Firebase not available — use an API key instead');
+        showToast('Firebase not available');
         return;
     }
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
-        provider.addScope('https://www.googleapis.com/auth/generative-language');
         const result = await firebaseAuth.signInWithPopup(provider);
-        geminiAccessToken = result.credential.accessToken;
         geminiUser = {
             displayName: result.user.displayName,
             email: result.user.email,
             photoURL: result.user.photoURL,
         };
-        // Also update SSO state so cloud save works
+        // Update SSO state so cloud save works
         currentUser = {
             uid: result.user.uid,
             email: result.user.email,
@@ -1701,7 +1700,7 @@ async function signInForGemini() {
         };
         onUserSignedIn(currentUser);
         updateGeminiAuthUI();
-        showToast('Signed in with Google');
+        showToast('Signed in — cloud save enabled');
     } catch (err) {
         if (err.code !== 'auth/popup-closed-by-user') {
             showToast('Sign-in failed: ' + err.message);
@@ -1710,8 +1709,10 @@ async function signInForGemini() {
 }
 
 function signOutGemini() {
-    geminiAccessToken = null;
     geminiUser = null;
+    if (firebaseAuth) firebaseAuth.signOut().catch(() => {});
+    currentUser = null;
+    onUserSignedOut();
     updateGeminiAuthUI();
 }
 
@@ -1719,7 +1720,7 @@ function updateGeminiAuthUI() {
     const signInBtn = document.getElementById('gemini-signin-btn');
     const signedIn = document.getElementById('gemini-signed-in');
     if (!signInBtn || !signedIn) return;
-    if (geminiAccessToken && geminiUser) {
+    if (geminiUser) {
         signInBtn.classList.add('hidden');
         signedIn.classList.remove('hidden');
         document.getElementById('gemini-user-name').textContent = geminiUser.displayName || geminiUser.email;
@@ -1977,12 +1978,8 @@ async function streamGemini(apiKey, container, typingDiv) {
         parts: [{ text: m.content }],
     }));
 
-    const useOAuth = !!(geminiAccessToken && apiKey === geminiAccessToken);
-    const url = useOAuth
-        ? 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse'
-        : `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
     const headers = { 'Content-Type': 'application/json' };
-    if (useOAuth) headers['Authorization'] = `Bearer ${geminiAccessToken}`;
 
     const resp = await fetch(url, {
             method: 'POST',
@@ -1997,11 +1994,6 @@ async function streamGemini(apiKey, container, typingDiv) {
     );
 
     if (!resp.ok) {
-        if (resp.status === 401 && useOAuth) {
-            geminiAccessToken = null;
-            updateGeminiAuthUI();
-            throw new Error('Google session expired — please sign in again.');
-        }
         const errBody = await resp.text();
         let errMsg = `Gemini API error ${resp.status}`;
         try {
