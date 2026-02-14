@@ -606,15 +606,10 @@
     <!-- Panel Header -->
     <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
         <div class="flex items-center gap-2">
-            <div id="ai-provider-icon" class="w-6 h-6 rounded-md bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+            <div class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <h2 class="font-mono font-bold text-sm text-zinc-100">AI Assistant</h2>
-            <select id="ai-provider-select" onchange="switchAiProvider(this.value)"
-                class="bg-zinc-800 border border-zinc-700 text-amber-400 text-xs font-mono px-2 py-0.5 rounded cursor-pointer outline-none hover:border-zinc-600 transition-colors">
-                <option value="claude">Claude</option>
-                <option value="gemini">Gemini</option>
-            </select>
+            <h2 class="font-mono font-bold text-sm text-zinc-100">Gemini Assistant</h2>
         </div>
         <div class="flex items-center gap-1">
             <button onclick="clearAssistantChat()" class="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors text-xs font-mono" title="Clear conversation">Clear</button>
@@ -629,23 +624,11 @@
 
     <!-- Auth Settings (collapsible) -->
     <div id="ai-settings" class="px-5 py-3 border-b border-zinc-800 shrink-0 hidden space-y-3">
-        <!-- Claude API Key -->
-        <div id="ai-key-claude">
-            <label class="text-xs font-mono text-zinc-500 block mb-1.5">Anthropic API Key <span class="text-amber-500/60">(Claude)</span></label>
-            <div class="flex gap-2">
-                <input id="ai-api-key-claude" type="text" placeholder="sk-ant-..." oninput="saveProviderKey('claude', this.value)" onpaste="setTimeout(()=>saveProviderKey('claude', this.value),0)" onchange="saveProviderKey('claude', this.value)" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true"
-                    class="api-key-masked flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors">
-                <button onclick="toggleKeyVisibility('ai-api-key-claude')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-            </div>
-            <p class="text-xs text-zinc-600 mt-1">Key stored locally, sent only to Anthropic API.</p>
-        </div>
         <!-- Gemini API Key + Model -->
-        <div id="ai-key-gemini">
+        <div>
             <label class="text-xs font-mono text-zinc-500 block mb-1.5">Gemini API Key <span class="text-blue-400/60">(Gemini)</span></label>
             <div class="flex gap-2">
-                <input id="ai-api-key-gemini" type="text" placeholder="AIza..." oninput="saveProviderKey('gemini', this.value)" onpaste="setTimeout(()=>saveProviderKey('gemini', this.value),0)" onchange="saveProviderKey('gemini', this.value)" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true"
+                <input id="ai-api-key-gemini" type="text" placeholder="AIza..." oninput="saveGeminiKey(this.value)" onpaste="setTimeout(()=>saveGeminiKey(this.value),0)" onchange="saveGeminiKey(this.value)" autocomplete="new-password" spellcheck="false" data-1p-ignore data-lpignore="true"
                     class="api-key-masked flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-blue-500/50 placeholder-zinc-600 transition-colors">
                 <button onclick="toggleKeyVisibility('ai-api-key-gemini')" class="text-zinc-500 hover:text-zinc-300 bg-zinc-800 border border-zinc-700 px-2 rounded-lg transition-colors" title="Show/hide key">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -668,28 +651,28 @@
     <div id="ai-messages" class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
         <!-- Welcome message -->
         <div class="text-center py-8">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-400/20 border border-blue-500/20 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <p class="text-sm text-zinc-400 mb-1">AI Coding Assistant</p>
-            <p class="text-xs text-zinc-600 max-w-xs mx-auto">Ask about Python, NumPy, SciPy, Matplotlib, or get help with your notebook code. Switch between <span class="text-amber-500/70">Claude</span> and <span class="text-blue-400/70">Gemini</span> using the dropdown above.</p>
+            <p class="text-sm text-zinc-400 mb-1">Gemini Coding Assistant</p>
+            <p class="text-xs text-zinc-600 max-w-xs mx-auto">Ask about Python, NumPy, SciPy, Matplotlib, or get help with your notebook code. Powered by <span class="text-blue-400/70">Gemini</span>.</p>
         </div>
     </div>
 
     <!-- Input Area -->
     <div class="px-4 py-3 border-t border-zinc-800 shrink-0">
         <div id="ai-context-bar" class="hidden mb-2 flex items-center gap-2 bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             <span id="ai-context-label" class="text-xs font-mono text-zinc-400 flex-1 truncate"></span>
             <button onclick="clearAiContext()" class="text-zinc-500 hover:text-zinc-300 transition-colors">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
         <div class="flex gap-2">
-            <textarea id="ai-input" rows="1" placeholder="Ask Claude about your code..."
+            <textarea id="ai-input" rows="1" placeholder="Ask Gemini about your code..."
                 onkeydown="handleAiInputKey(event)" oninput="autoResizeAiInput(this)"
-                class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm font-mono px-3 py-2.5 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors resize-none max-h-32 overflow-y-auto"></textarea>
-            <button onclick="sendAiMessage()" id="ai-send-btn" class="bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-zinc-900 font-bold px-3 rounded-lg transition-colors shrink-0" title="Send message">
+                class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-200 text-sm font-mono px-3 py-2.5 rounded-lg outline-none focus:border-blue-500/50 placeholder-zinc-600 transition-colors resize-none max-h-32 overflow-y-auto"></textarea>
+            <button onclick="sendAiMessage()" id="ai-send-btn" class="bg-blue-500 hover:bg-blue-400 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold px-3 rounded-lg transition-colors shrink-0" title="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
         </div>
@@ -1099,7 +1082,7 @@ function makeCellDOM(cell) {
             <button onclick="runCell('${cell.id}')" class="${runBtnClass} px-2 py-1 rounded text-xs font-mono flex items-center gap-1 transition-colors" title="Run (Shift+Enter)">${ICO.play(12)} Run</button>
             <button onclick="moveCellDir('${cell.id}',-1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Up">${ICO.chevUp(14)}</button>
             <button onclick="moveCellDir('${cell.id}',1)" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Move Down">${ICO.chevDown(14)}</button>
-            <button onclick="askAiAboutCell('${cell.id}')" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 px-1.5 py-1 rounded text-xs font-mono transition-colors flex items-center gap-0.5" title="Ask Claude about this cell">${svgIcon('<path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/>', 12)} AI</button>
+            <button onclick="askAiAboutCell('${cell.id}')" class="text-zinc-500 hover:text-blue-400 hover:bg-zinc-800 px-1.5 py-1 rounded text-xs font-mono transition-colors flex items-center gap-0.5" title="Ask Gemini about this cell">${svgIcon('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', 12)} AI</button>
             <button onclick="toggleCellType('${cell.id}')" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1 rounded text-xs font-mono transition-colors" title="Toggle Code/Markdown">${cell.type === 'code' ? ICO.code(14) : ICO.type(14)}</button>
             <button onclick="deleteCell('${cell.id}')" class="text-zinc-500 hover:text-red-400 hover:bg-zinc-800 p-1 rounded transition-colors" title="Delete Cell">${ICO.x(14)}</button>
         </div>
@@ -1573,7 +1556,6 @@ let aiStreaming = false;
 let aiContextCode = null;
 let aiContextError = null;
 let aiAbortController = null;
-let aiProvider = localStorage.getItem('pylab-ai-provider') || 'claude';
 let geminiModel = localStorage.getItem('pylab-gemini-model') || 'gemini-2.0-flash';
 
 const AI_SYSTEM_PROMPT = `You are an AI coding assistant embedded in PyLab, a browser-based Python notebook (like Jupyter) powered by Pyodide. The environment has NumPy, SciPy, and Matplotlib pre-loaded.
@@ -1589,22 +1571,6 @@ Guidelines:
 - When showing code, make it ready to paste and run in a notebook cell
 - If the user shares cell code or errors, focus on their specific issue
 - Use markdown formatting for clarity`;
-
-function switchAiProvider(provider) {
-    aiProvider = provider;
-    localStorage.setItem('pylab-ai-provider', provider);
-    const icon = document.getElementById('ai-provider-icon');
-    if (provider === 'gemini') {
-        icon.className = 'w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center';
-        icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
-    } else {
-        icon.className = 'w-6 h-6 rounded-md bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center';
-        icon.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>`;
-    }
-    document.getElementById('ai-input').placeholder = provider === 'gemini'
-        ? 'Ask Gemini about your code...'
-        : 'Ask Claude about your code...';
-}
 
 function toggleAssistant() {
     const panel = document.getElementById('assistant-panel');
@@ -1625,23 +1591,12 @@ function toggleAssistant() {
                 panel.classList.add('settled');
             }
         });
-        // Restore provider selection
-        document.getElementById('ai-provider-select').value = aiProvider;
-        switchAiProvider(aiProvider);
-        // Load saved API key for Claude
-        document.getElementById('ai-api-key-claude').value = localStorage.getItem('pylab-anthropic-key') || '';
         // Load saved API key and model for Gemini
-        const geminiKeyInput = document.getElementById('ai-api-key-gemini');
-        if (geminiKeyInput) geminiKeyInput.value = localStorage.getItem('pylab-gemini-key') || '';
-        const geminiModelSelect = document.getElementById('gemini-model-select');
-        if (geminiModelSelect) geminiModelSelect.value = geminiModel;
-        // Show settings if current provider has no credentials
-        const hasCredentials = getProviderKey(aiProvider);
-        if (!hasCredentials) {
+        document.getElementById('ai-api-key-gemini').value = localStorage.getItem('pylab-gemini-key') || '';
+        document.getElementById('gemini-model-select').value = geminiModel;
+        // Show settings if no API key
+        if (!getGeminiKey()) {
             document.getElementById('ai-settings').classList.remove('hidden');
-            if (aiProvider === 'claude') {
-                setTimeout(() => document.getElementById('ai-api-key-claude').focus(), 350);
-            }
         } else {
             setTimeout(() => document.getElementById('ai-input').focus(), 350);
         }
@@ -1657,14 +1612,12 @@ function toggleKeyVisibility(inputId) {
     inp.classList.toggle('api-key-masked');
 }
 
-function saveProviderKey(provider, val) {
-    const key = provider === 'gemini' ? 'pylab-gemini-key' : 'pylab-anthropic-key';
-    localStorage.setItem(key, val.trim());
+function saveGeminiKey(val) {
+    localStorage.setItem('pylab-gemini-key', val.trim());
 }
 
-function getProviderKey(provider) {
-    const key = provider === 'gemini' ? 'pylab-gemini-key' : 'pylab-anthropic-key';
-    return (localStorage.getItem(key) || '').trim();
+function getGeminiKey() {
+    return (localStorage.getItem('pylab-gemini-key') || '').trim();
 }
 
 function saveGeminiModel(model) {
@@ -1678,10 +1631,10 @@ function clearAssistantChat() {
     const container = document.getElementById('ai-messages');
     container.innerHTML = `
         <div class="text-center py-8">
-            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/20 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-400/20 border border-blue-500/20 flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <p class="text-sm text-zinc-400 mb-1">AI Coding Assistant</p>
+            <p class="text-sm text-zinc-400 mb-1">Gemini Coding Assistant</p>
             <p class="text-xs text-zinc-600 max-w-xs mx-auto">Ask about Python, NumPy, SciPy, Matplotlib, or get help with your notebook code.</p>
         </div>`;
 }
@@ -1777,15 +1730,11 @@ async function sendAiMessage() {
     const text = input.value.trim();
     if (!text || aiStreaming) return;
 
-    const apiKey = getProviderKey(aiProvider);
+    const apiKey = getGeminiKey();
     if (!apiKey) {
         document.getElementById('ai-settings').classList.remove('hidden');
-        if (aiProvider === 'gemini') {
-            showToast('Please sign in with Google or enter an API key');
-        } else {
-            showToast('Please enter your Anthropic (Claude) API key');
-            setTimeout(() => document.getElementById('ai-api-key-claude').focus(), 100);
-        }
+        showToast('Please enter your Gemini API key');
+        setTimeout(() => document.getElementById('ai-api-key-gemini').focus(), 100);
         return;
     }
 
@@ -1814,11 +1763,10 @@ async function sendAiMessage() {
     const typingDiv = document.createElement('div');
     typingDiv.id = 'ai-typing';
     typingDiv.className = 'flex items-center gap-1.5 px-2 py-2';
-    const dotColor = aiProvider === 'gemini' ? 'bg-blue-400' : 'bg-amber-500';
     typingDiv.innerHTML = `
-        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full ${dotColor}"></span>
-        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full ${dotColor}"></span>
-        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full ${dotColor}"></span>`;
+        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+        <span class="ai-typing-dot w-1.5 h-1.5 rounded-full bg-blue-400"></span>`;
     container.appendChild(typingDiv);
     container.scrollTop = container.scrollHeight;
 
@@ -1829,11 +1777,7 @@ async function sendAiMessage() {
     try {
         aiAbortController = new AbortController();
 
-        if (aiProvider === 'gemini') {
-            await streamGemini(apiKey, container, typingDiv);
-        } else {
-            await streamClaude(apiKey, container, typingDiv);
-        }
+        await streamGemini(apiKey, container, typingDiv);
     } catch (err) {
         typingDiv.remove();
         if (err.name !== 'AbortError') {
@@ -1851,65 +1795,7 @@ async function sendAiMessage() {
     }
 }
 
-// ── Claude (Anthropic) streaming ──
-async function streamClaude(apiKey, container, typingDiv) {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
-            model: 'claude-sonnet-4-5-20250929',
-            max_tokens: 4096,
-            system: AI_SYSTEM_PROMPT,
-            messages: aiMessages.slice(-20),
-            stream: true,
-        }),
-        signal: aiAbortController.signal,
-    });
-
-    if (!resp.ok) {
-        const errBody = await resp.text();
-        let errMsg = `Claude API error ${resp.status}`;
-        try { errMsg = JSON.parse(errBody).error?.message || errMsg; } catch {}
-        throw new Error(errMsg);
-    }
-
-    typingDiv.remove();
-    let fullText = '';
-    const msgDiv = addAiMessageToUI('assistant', '');
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            try {
-                const evt = JSON.parse(data);
-                if (evt.type === 'content_block_delta' && evt.delta?.text) {
-                    fullText += evt.delta.text;
-                    msgDiv.innerHTML = renderAiMarkdown(fullText);
-                    container.scrollTop = container.scrollHeight;
-                }
-            } catch {}
-        }
-    }
-    aiMessages.push({ role: 'assistant', content: fullText });
-}
-
-// ── Gemini (Google) streaming ──
+// ── Gemini streaming ──
 async function streamGemini(apiKey, container, typingDiv) {
     // Convert conversation history to Gemini format
     const contents = aiMessages.slice(-20).map(m => ({
