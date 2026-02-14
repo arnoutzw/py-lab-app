@@ -188,6 +188,72 @@
         }
         .cs-section.hidden { display: none; }
 
+        /* ── Workspace Panel ── */
+        #workspace-panel.open { transform: translateX(0); }
+        .ws-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .ws-table thead th {
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #71717a;
+            padding: 0.4rem 0.5rem;
+            border-bottom: 1px solid #27272a;
+            position: sticky;
+            top: 0;
+            background: #18181b;
+            z-index: 1;
+            cursor: pointer;
+            user-select: none;
+        }
+        .ws-table thead th:hover { color: #a1a1aa; }
+        .ws-table thead th.sorted-asc::after { content: ' ▲'; color: #f59e0b; }
+        .ws-table thead th.sorted-desc::after { content: ' ▼'; color: #f59e0b; }
+        .ws-table tbody td {
+            padding: 0.35rem 0.5rem;
+            border-bottom: 1px solid #1e1e22;
+            vertical-align: top;
+            color: #d4d4d8;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .ws-table tbody tr:hover td { background: rgba(245, 158, 11, 0.04); }
+        .ws-table tbody tr.ws-expanded td { white-space: normal; word-break: break-all; }
+        .ws-table tbody tr { cursor: pointer; }
+        .ws-type { color: #c084fc; }
+        .ws-shape { color: #60a5fa; }
+        .ws-value { color: #a1a1aa; font-size: 0.7rem; }
+        .ws-name { color: #fbbf24; font-weight: 500; }
+        .ws-empty {
+            text-align: center;
+            color: #52525b;
+            padding: 2rem 1rem;
+            font-size: 0.8rem;
+        }
+        .ws-badge {
+            display: inline-block;
+            font-size: 0.6rem;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        .ws-badge-int { background: #34d39920; color: #34d399; }
+        .ws-badge-float { background: #60a5fa20; color: #60a5fa; }
+        .ws-badge-str { background: #4ade8020; color: #4ade80; }
+        .ws-badge-bool { background: #f472b620; color: #f472b6; }
+        .ws-badge-list { background: #fbbf2420; color: #fbbf24; }
+        .ws-badge-dict { background: #fb923c20; color: #fb923c; }
+        .ws-badge-ndarray { background: #c084fc20; color: #c084fc; }
+        .ws-badge-other { background: #71717a20; color: #71717a; }
+
         /* ── AI Assistant Panel ── */
         #assistant-panel.open { transform: translateX(0); }
         #assistant-panel.settled { transform: none; }
@@ -340,6 +406,10 @@
                 <span id="cloud-status" class="hidden text-xs font-mono text-zinc-500"></span>
             </div>
             <div class="w-px h-5 bg-zinc-700 mx-1 hidden sm:block"></div>
+            <button onclick="toggleWorkspace()" id="workspace-btn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5" title="Variable Explorer (Workspace)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <span class="hidden sm:inline">Workspace</span>
+            </button>
             <button onclick="toggleCheatSheet()" id="cheatsheet-btn" class="bg-zinc-700 hover:bg-zinc-600 text-zinc-300 text-xs font-mono px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5" title="MATLAB → Python Cheat Sheet">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
                 <span class="hidden sm:inline">Cheat Sheet</span>
@@ -354,6 +424,60 @@
 
 <!-- ══════════════ NOTEBOOK ══════════════ -->
 <main id="notebook" class="max-w-5xl mx-auto px-4 py-6"></main>
+
+<!-- ══════════════ WORKSPACE PANEL ══════════════ -->
+<div id="workspace-overlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="toggleWorkspace()"></div>
+<aside id="workspace-panel" class="fixed top-0 right-0 h-full w-[480px] max-w-[92vw] bg-zinc-900 border-l border-zinc-800 z-50 transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+    <!-- Panel Header -->
+    <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-800 shrink-0">
+        <div class="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <h2 class="font-mono font-bold text-sm text-zinc-100">Variable Explorer</h2>
+            <span id="ws-var-count" class="text-xs px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded font-mono">0 vars</span>
+        </div>
+        <div class="flex items-center gap-1">
+            <button onclick="refreshWorkspace()" class="text-zinc-500 hover:text-amber-400 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors" title="Refresh variables">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            </button>
+            <button onclick="clearWorkspaceVars()" class="text-zinc-500 hover:text-red-400 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors text-xs font-mono" title="Clear all variables">Clear</button>
+            <button onclick="toggleWorkspace()" class="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 p-1.5 rounded-lg transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="px-5 py-3 border-b border-zinc-800 shrink-0">
+        <input id="workspace-search" type="text" placeholder="Filter variables..." oninput="filterWorkspace(this.value)"
+            class="w-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs font-mono px-3 py-2 rounded-lg outline-none focus:border-amber-500/50 placeholder-zinc-600 transition-colors">
+    </div>
+
+    <!-- Variable Table -->
+    <div id="workspace-content" class="flex-1 overflow-y-auto">
+        <table class="ws-table">
+            <thead>
+                <tr>
+                    <th onclick="sortWorkspace('name')" data-col="name">Name</th>
+                    <th onclick="sortWorkspace('type')" data-col="type">Type</th>
+                    <th onclick="sortWorkspace('size')" data-col="size">Size</th>
+                    <th onclick="sortWorkspace('value')" data-col="value">Value</th>
+                </tr>
+            </thead>
+            <tbody id="workspace-tbody">
+            </tbody>
+        </table>
+        <div id="workspace-empty" class="ws-empty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3f3f46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            <p>No variables yet</p>
+            <p class="text-xs text-zinc-600 mt-1">Run a cell to see variables here</p>
+        </div>
+    </div>
+
+    <!-- Panel Footer -->
+    <div class="px-5 py-2.5 border-t border-zinc-800 shrink-0">
+        <p class="text-xs text-zinc-600 font-mono text-center">Click a variable to expand &middot; Auto-refreshes after execution</p>
+    </div>
+</aside>
 
 <!-- ══════════════ CHEAT SHEET PANEL ══════════════ -->
 <div id="cheatsheet-overlay" class="fixed inset-0 bg-black/50 z-40 hidden" onclick="toggleCheatSheet()"></div>
@@ -1364,6 +1488,10 @@ __json.dumps({'stdout': __out.getvalue(), 'stderr': __err.getvalue(), 'error': _
     if (!isRunningAll) {
         updateStatusBar();
         scheduleAutoSave();
+        // Auto-refresh workspace if open
+        if (document.getElementById('workspace-panel').classList.contains('open')) {
+            refreshWorkspace();
+        }
     }
 }
 
@@ -1451,6 +1579,10 @@ async function runAllCells() {
     updateStatusBar();
     showToast('All cells executed');
     scheduleAutoSave();
+    // Auto-refresh workspace if open
+    if (document.getElementById('workspace-panel').classList.contains('open')) {
+        refreshWorkspace();
+    }
 }
 
 async function restartKernel() {
@@ -1501,6 +1633,9 @@ import scipy
         kernelReady = true;
         updateStatusBar();
         showToast('Kernel restarted');
+        // Clear workspace after kernel restart
+        workspaceVars = [];
+        renderWorkspaceTable([]);
     } catch (err) {
         showToast('Restart failed: ' + err.message);
     }
@@ -1546,6 +1681,217 @@ function filterCheatSheet(query) {
         });
         section.classList.toggle('hidden', !anyVisible && !!q);
     });
+}
+
+// ═══════════════════════════════════════════
+//  WORKSPACE (VARIABLE EXPLORER)
+// ═══════════════════════════════════════════
+let workspaceVars = [];
+let workspaceSortCol = 'name';
+let workspaceSortAsc = true;
+let workspaceFilter = '';
+
+function toggleWorkspace() {
+    const panel = document.getElementById('workspace-panel');
+    const overlay = document.getElementById('workspace-overlay');
+    const isOpen = panel.classList.contains('open');
+    if (isOpen) {
+        panel.classList.remove('open');
+        overlay.classList.add('hidden');
+    } else {
+        panel.classList.add('open');
+        overlay.classList.remove('hidden');
+        document.getElementById('workspace-search').value = '';
+        workspaceFilter = '';
+        refreshWorkspace();
+    }
+}
+
+async function refreshWorkspace() {
+    if (!kernelReady || !pyodide) {
+        renderWorkspaceTable([]);
+        return;
+    }
+
+    try {
+        const raw = await pyodide.runPythonAsync(`
+import json as __json, sys as __sys, types as __types
+
+__ws_vars = []
+__ws_skip = {
+    'np', 'plt', 'scipy', 'signal', 'matplotlib',
+    '__builtins__', '__name__', '__doc__', '__package__',
+    '__loader__', '__spec__', '__annotations__', '__file__',
+}
+
+for __ws_name in sorted(globals().keys()):
+    if __ws_name.startswith('_'):
+        continue
+    if __ws_name in __ws_skip:
+        continue
+    __ws_obj = globals()[__ws_name]
+    # Skip modules, functions, classes, and type objects
+    if isinstance(__ws_obj, (__types.ModuleType, __types.FunctionType, __types.BuiltinFunctionType, type)):
+        continue
+
+    __ws_t = type(__ws_obj).__name__
+    __ws_size = ''
+    __ws_val = ''
+
+    try:
+        if hasattr(__ws_obj, 'shape'):
+            __ws_size = str(__ws_obj.shape)
+        elif hasattr(__ws_obj, '__len__'):
+            __ws_size = str(len(__ws_obj))
+        else:
+            __ws_size = '1'
+    except:
+        __ws_size = '?'
+
+    try:
+        __ws_r = repr(__ws_obj)
+        if len(__ws_r) > 120:
+            __ws_r = __ws_r[:117] + '...'
+        __ws_val = __ws_r
+    except:
+        __ws_val = '<error>'
+
+    __ws_vars.append({
+        'name': __ws_name,
+        'type': __ws_t,
+        'size': __ws_size,
+        'value': __ws_val,
+    })
+
+__json.dumps(__ws_vars)
+`);
+        workspaceVars = JSON.parse(raw);
+    } catch (err) {
+        workspaceVars = [];
+    }
+    renderWorkspaceTable(workspaceVars);
+}
+
+function renderWorkspaceTable(vars) {
+    const tbody = document.getElementById('workspace-tbody');
+    const empty = document.getElementById('workspace-empty');
+    const countEl = document.getElementById('ws-var-count');
+
+    // Apply filter
+    let filtered = vars;
+    if (workspaceFilter) {
+        const q = workspaceFilter.toLowerCase();
+        filtered = vars.filter(v =>
+            v.name.toLowerCase().includes(q) ||
+            v.type.toLowerCase().includes(q) ||
+            v.value.toLowerCase().includes(q)
+        );
+    }
+
+    // Apply sort
+    filtered.sort((a, b) => {
+        let va = a[workspaceSortCol] || '';
+        let vb = b[workspaceSortCol] || '';
+        if (workspaceSortCol === 'size') {
+            // Try numeric sort for size
+            const na = parseFloat(va.replace(/[^0-9.-]/g, '')) || 0;
+            const nb = parseFloat(vb.replace(/[^0-9.-]/g, '')) || 0;
+            return workspaceSortAsc ? na - nb : nb - na;
+        }
+        va = va.toString().toLowerCase();
+        vb = vb.toString().toLowerCase();
+        if (va < vb) return workspaceSortAsc ? -1 : 1;
+        if (va > vb) return workspaceSortAsc ? 1 : -1;
+        return 0;
+    });
+
+    // Update column header sort indicators
+    document.querySelectorAll('.ws-table thead th').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.dataset.col === workspaceSortCol) {
+            th.classList.add(workspaceSortAsc ? 'sorted-asc' : 'sorted-desc');
+        }
+    });
+
+    countEl.textContent = `${vars.length} var${vars.length !== 1 ? 's' : ''}`;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+    }
+
+    empty.classList.add('hidden');
+    tbody.innerHTML = filtered.map(v => {
+        const badgeClass = getBadgeClass(v.type);
+        return `<tr onclick="toggleVarExpand(this)" title="Click to expand">
+            <td class="ws-name">${esc(v.name)}</td>
+            <td><span class="ws-badge ${badgeClass}">${esc(v.type)}</span></td>
+            <td class="ws-shape">${esc(v.size)}</td>
+            <td class="ws-value">${esc(v.value)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function getBadgeClass(type) {
+    const t = type.toLowerCase();
+    if (t === 'int' || t === 'int64' || t === 'int32') return 'ws-badge-int';
+    if (t === 'float' || t === 'float64' || t === 'float32') return 'ws-badge-float';
+    if (t === 'str') return 'ws-badge-str';
+    if (t === 'bool' || t === 'bool_') return 'ws-badge-bool';
+    if (t === 'list' || t === 'tuple' || t === 'set') return 'ws-badge-list';
+    if (t === 'dict') return 'ws-badge-dict';
+    if (t === 'ndarray') return 'ws-badge-ndarray';
+    return 'ws-badge-other';
+}
+
+function toggleVarExpand(tr) {
+    tr.classList.toggle('ws-expanded');
+}
+
+function sortWorkspace(col) {
+    if (workspaceSortCol === col) {
+        workspaceSortAsc = !workspaceSortAsc;
+    } else {
+        workspaceSortCol = col;
+        workspaceSortAsc = true;
+    }
+    renderWorkspaceTable(workspaceVars);
+}
+
+function filterWorkspace(query) {
+    workspaceFilter = query.trim();
+    renderWorkspaceTable(workspaceVars);
+}
+
+async function clearWorkspaceVars() {
+    if (!kernelReady || !pyodide) return;
+    try {
+        await pyodide.runPythonAsync(`
+import types as __types
+__to_del = []
+__ws_skip = {
+    'np', 'plt', 'scipy', 'signal', 'matplotlib',
+    '__builtins__', '__name__', '__doc__', '__package__',
+    '__loader__', '__spec__', '__annotations__', '__file__',
+}
+for __k in list(globals().keys()):
+    if __k.startswith('_'):
+        continue
+    if __k in __ws_skip:
+        continue
+    __obj = globals()[__k]
+    if isinstance(__obj, (__types.ModuleType, __types.FunctionType, __types.BuiltinFunctionType, type)):
+        continue
+    __to_del.append(__k)
+for __k in __to_del:
+    del globals()[__k]
+`);
+        showToast('Workspace cleared');
+        await refreshWorkspace();
+    } catch (err) {
+        showToast('Failed to clear workspace');
+    }
 }
 
 // ═══════════════════════════════════════════
